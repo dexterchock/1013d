@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer, LiquidButton } from './LiquidContainer';
@@ -209,41 +209,53 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   // Ref to the inner wrapper that contains actual content to measure
   const contentWrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Track sidebar open state in a ref to avoid stale closures in ResizeObserver
+  const sidebarOpenRef = useRef(store.sidebarOpen);
 
+  // Sync ref when state changes
   useEffect(() => {
+    sidebarOpenRef.current = store.sidebarOpen;
+    // Force a manual check when state toggles to ensure animation starts immediately
+    if (contentWrapperRef.current && containerRef.current) {
+        // We trigger a "fake" resize logic here to ensure sync
+        const height = store.sidebarOpen ? contentWrapperRef.current.offsetHeight + 32 : 56;
+        containerRef.current.style.height = `${height}px`;
+    }
+  }, [store.sidebarOpen]);
+
+  useLayoutEffect(() => {
     const measureTarget = contentWrapperRef.current;
     const container = containerRef.current;
     
     if (!measureTarget || !container) return;
 
-    const updateHeight = () => {
-         if (!store.sidebarOpen) {
-             container.style.height = '56px'; // Collapsed height (h-14)
+    // The logic is self-contained and uses the Ref for current state
+    const handleResize = () => {
+         // If sidebar is closed, force collapsed height
+         if (!sidebarOpenRef.current) {
+             container.style.height = '56px'; 
              return;
          }
          
-         // Measure content height directly from the wrapper
-         // offsetHeight includes borders and padding of the element itself, and height of children
          const contentHeight = measureTarget.offsetHeight; 
-         
-         // Add padding from LiquidContainer (p-4 = 1rem = 16px. Top+Bottom = 32px)
-         const padding = 32;
+         const padding = 32; // 1rem top + 1rem bottom padding from LiquidContainer
          const totalHeight = contentHeight + padding;
          
          container.style.height = `${totalHeight}px`;
     };
 
     const ro = new ResizeObserver(() => {
-        requestAnimationFrame(updateHeight);
+        requestAnimationFrame(handleResize);
     });
     
     ro.observe(measureTarget);
     
     // Initial sync
-    updateHeight();
+    handleResize();
 
     return () => ro.disconnect();
-  }, [store.sidebarOpen]); // Re-bind when open state changes, but RO handles content updates
+  }, []); // Empty dependency array ensures RO is created ONCE and never disconnected
 
   // Trigger entry animation
   useEffect(() => {
@@ -297,7 +309,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
             ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
           `}
           style={{ 
-             maxHeight: '90vh' // Cap the height to viewport
+             maxHeight: '90vh',
+             height: '56px' // Start collapsed/default, JS will override immediately
           }}
         >
           <LiquidContainer className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
