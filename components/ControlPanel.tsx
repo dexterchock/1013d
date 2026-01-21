@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
@@ -217,6 +216,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     const container = containerRef.current;
     if (!content || !container) return;
 
+    // 1. Define the update function
     const updateHeight = () => {
          if (!store.sidebarOpen) {
              container.style.height = '56px'; // Collapsed height (h-14)
@@ -230,17 +230,36 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
          container.style.height = `${totalHeight}px`;
     };
 
-    const ro = new ResizeObserver(() => {
-        requestAnimationFrame(updateHeight);
-    });
-    
-    ro.observe(content);
-    
-    // Initial sync
+    // 2. Initial sync
     updateHeight();
 
-    return () => ro.disconnect();
-  }, [store.sidebarOpen]); // Re-bind/Re-run when open state changes
+    // 3. Set up ResizeObserver
+    const ro = new ResizeObserver(() => {
+        updateHeight();
+    });
+    ro.observe(content);
+
+    // 4. FIX: Polling Interval for CSS Transitions
+    // Since ResizeObserver often fails to fire when a parent container restricts
+    // the height during an animation, we force updates every 16ms (60fps) 
+    // for the duration of the transition (approx 600ms).
+    const animationDuration = 600; 
+    const startTime = Date.now();
+    
+    const intervalId = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        updateHeight();
+        
+        if (elapsed > animationDuration) {
+            clearInterval(intervalId);
+        }
+    }, 16);
+
+    return () => {
+        ro.disconnect();
+        clearInterval(intervalId);
+    };
+  }, [store.sidebarOpen, store.selectedModelId, activeTab, store.models.length, showAbout]); 
 
   // Trigger entry animation
   useEffect(() => {
