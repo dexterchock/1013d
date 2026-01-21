@@ -6,10 +6,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>1013D</title>
     
-    <!-- Dynamic SVG Favicon: Dark background, White '1', Blue 'D' -->
+    <!-- Static SVG Icon (Immediate loading for PC Tabs) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23050505'/%3E%3Ctext x='50' y='50' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='55'%3E%3Ctspan fill='%23ffffff'%3E1%3C/tspan%3E%3Ctspan fill='%233b82f6'%3ED%3C/tspan%3E%3C/text%3E%3C/svg%3E" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23050505'/%3E%3Ctext x='50' y='50' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='55'%3E%3Ctspan fill='%23ffffff'%3E1%3C/tspan%3E%3Ctspan fill='%233b82f6'%3ED%3C/tspan%3E%3C/text%3E%3C/svg%3E" />
+    
+    <!-- Mobile Web App Meta -->
     <meta name="apple-mobile-web-app-title" content="1013D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
+
+    <!-- Icon Generator for iOS & Android (Converts SVG to PNG on the fly) -->
+    <script>
+      (function() {
+        // Define high-res SVG
+        const svgData = `<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23050505'/><text x='50' y='50' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='55'><tspan fill='%23ffffff'>1</tspan><tspan fill='%233b82f6'>D</tspan></text></svg>`;
+        
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const pngUrl = canvas.toDataURL('image/png');
+
+          // 1. Apple Touch Icon (iOS Home Screen)
+          let appleLink = document.createElement('link');
+          appleLink.rel = 'apple-touch-icon';
+          appleLink.href = pngUrl;
+          document.head.appendChild(appleLink);
+
+          // 2. Standard PNG Icon (Android/Desktop fallback)
+          let pngLink = document.createElement('link');
+          pngLink.rel = 'icon';
+          pngLink.type = 'image/png';
+          pngLink.href = pngUrl;
+          document.head.appendChild(pngLink);
+
+          // 3. Web App Manifest (Android Home Screen)
+          const manifest = {
+            name: "1013D",
+            short_name: "1013D",
+            start_url: ".",
+            display: "standalone",
+            background_color: "#050505",
+            theme_color: "#050505",
+            icons: [{ src: pngUrl, sizes: "512x512", type: "image/png" }]
+          };
+          const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+          let manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          manifestLink.href = URL.createObjectURL(manifestBlob);
+          document.head.appendChild(manifestLink);
+        };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+      })();
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
