@@ -7,38 +7,92 @@
     <title>1013D</title>
     
     <!-- PWA & Mobile Meta -->
-    <link rel="manifest" href="manifest.json" />
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="1013D">
     <meta name="theme-color" content="#050505">
 
-    <!-- Static SVG Favicon (Desktop Tabs) -->
+    <!-- 
+      Static Icons:
+      iOS "Add to Home Screen" often ignores JavaScript-injected links and looks only at the raw HTML.
+      We provide a static Base64 PNG here as a fallback. 
+      (Black square 1x1 base64 used here as placeholder for valid structure - iOS will scale it or use it as is)
+    -->
+    <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23050505'/%3E%3Ctext x='50' y='50' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='55'%3E%3Ctspan fill='%23ffffff'%3E1%3C/tspan%3E%3Ctspan fill='%233b82f6'%3ED%3C/tspan%3E%3C/text%3E%3C/svg%3E" />
 
-    <!-- iOS Icon Generator -->
-    <!-- iOS ignores SVG icons and manifest icons. We dynamically generate a PNG for it. -->
+    <!-- Dynamic Icon Generator -->
     <script>
       (function() {
-        const svgData = `<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%23050505'/><text x='256' y='256' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280'><tspan fill='%23ffffff'>1</tspan><tspan fill='%233b82f6'>D</tspan></text></svg>`;
+        // We use a square SVG for generation because iOS applies its own rounded mask.
+        // If we bake in rounded corners, iOS will mask the corners again, potentially showing black artifacts.
+        // We also use a standard font stack to ensure text renders.
+        const svgString = `
+          <svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
+            <rect width='1024' height='1024' fill='#050505'/>
+            <text x='512' y='512' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='560'>
+              <tspan fill='#ffffff'>1</tspan><tspan fill='#3b82f6'>D</tspan>
+            </text>
+          </svg>`;
+        
+        const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
         
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          canvas.width = 512;
-          canvas.height = 512;
+          canvas.width = 1024;
+          canvas.height = 1024;
           const ctx = canvas.getContext('2d');
+          
+          // Double assurance of background color
+          ctx.fillStyle = '#050505';
+          ctx.fillRect(0, 0, 1024, 1024);
+          
           ctx.drawImage(img, 0, 0);
+          
           const pngUrl = canvas.toDataURL('image/png');
 
-          // Inject Apple Touch Icon
-          const link = document.createElement('link');
-          link.rel = 'apple-touch-icon';
-          link.href = pngUrl;
-          document.head.appendChild(link);
+          // 1. Update Apple Touch Icon (iOS Home Screen)
+          // Remove existing if any
+          const existingApple = document.querySelector('link[rel="apple-touch-icon"]');
+          if (existingApple) existingApple.remove();
+          
+          const appleLink = document.createElement('link');
+          appleLink.rel = 'apple-touch-icon';
+          appleLink.href = pngUrl;
+          document.head.appendChild(appleLink);
+
+          // 2. Dynamic Manifest (Android Home Screen)
+          // Using a PNG blob in the manifest ensures Android doesn't try to rasterize the SVG poorly.
+          const manifest = {
+            name: "1013D",
+            short_name: "1013D",
+            start_url: ".",
+            display: "standalone",
+            background_color: "#050505",
+            theme_color: "#050505",
+            orientation: "any",
+            icons: [
+              {
+                src: pngUrl,
+                sizes: "1024x1024",
+                type: "image/png",
+                purpose: "any maskable"
+              }
+            ]
+          };
+          
+          const stringManifest = JSON.stringify(manifest);
+          const blob = new Blob([stringManifest], {type: 'application/json'});
+          const manifestUrl = URL.createObjectURL(blob);
+          
+          const manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          manifestLink.href = manifestUrl;
+          document.head.appendChild(manifestLink);
         };
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+        img.src = svgDataUrl;
       })();
     </script>
 
