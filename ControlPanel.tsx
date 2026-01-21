@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer, LiquidButton } from './LiquidContainer';
@@ -87,6 +88,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const isSelected = store.selectedModelId === model.id;
     const [isExpanded, setIsExpanded] = useState(false);
 
+    // Sync expansion with selection state, allowing for mount animation
     useEffect(() => {
         if (isSelected) {
             const frame = requestAnimationFrame(() => {
@@ -117,12 +119,15 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const pos = store.modelPositions[model.id] || {x:0, y:0, z:0};
     const rot = store.modelRotations[model.id] || {x:0, y:0, z:0};
     const scale = store.modelScales[model.id] || {x:1, y:1, z:1};
+    
+    // Hardcoded bezier for Tailwind to ensure it works
+    const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
     return (
         <div 
             onClick={() => store.selectModel(model.id)}
             className={`
-                flex flex-col rounded-lg border cursor-pointer transition-all duration-500 ease-out overflow-hidden
+                flex flex-col rounded-lg border cursor-pointer transition-all duration-500 ${easingClass} overflow-hidden
                 ${isSelected 
                     ? 'bg-black/40 border-white/10 shadow-lg' 
                     : 'bg-white/5 border-white/5 hover:border-white/20'
@@ -145,15 +150,19 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
 
             <div 
                 className={`
-                    grid transition-[grid-template-rows,opacity] duration-500 ease-out
-                    ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
+                    grid transition-[grid-template-rows] duration-500 ${easingClass}
+                    ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}
                 `}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="overflow-hidden min-h-0">
-                    <div className="px-2 pb-3 pt-0">
+                <div className="overflow-hidden">
+                    <div className={`
+                        px-2 pb-3 pt-0 transition-opacity duration-500 delay-100
+                        ${isExpanded ? 'opacity-100' : 'opacity-0'}
+                    `}>
                         <div className="h-px bg-white/10 w-full mb-3"></div>
                         <div className="space-y-3">
+                            {/* Position */}
                             <div>
                                 <label className="text-[9px] text-white/30 uppercase mb-1 block">Position (mm)</label>
                                 <div className="grid grid-cols-3 gap-1">
@@ -162,6 +171,8 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                                     <NumberInput label="Z" value={Math.round(pos.z * 100) / 100} onChange={(v) => updateTransform('position', 'z', v)} />
                                 </div>
                             </div>
+
+                            {/* Rotation */}
                             <div>
                                 <label className="text-[9px] text-white/30 uppercase mb-1 block">Rotation (deg)</label>
                                 <div className="grid grid-cols-3 gap-1">
@@ -170,6 +181,8 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                                     <NumberInput label="Z" value={Math.round(THREE.MathUtils.radToDeg(rot.z))} onChange={(v) => updateTransform('rotation', 'z', v)} />
                                 </div>
                             </div>
+
+                            {/* Scale */}
                             <div>
                                 <label className="text-[9px] text-white/30 uppercase mb-1 block">Scale</label>
                                 <div className="grid grid-cols-3 gap-1">
@@ -192,42 +205,79 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   const [mounted, setMounted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   
+  // Ref to the outer container (the window itself) that animates height
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentWrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Use a callback ref for the inner content wrapper to ensure we always have the current node
+  // even if React replaces the element during renders (e.g. switching tabs)
+  const [contentWrapper, setContentWrapper] = useState<HTMLDivElement | null>(null);
+  
+  // Track sidebar open state in a ref for the ResizeObserver callback
+  const sidebarOpenRef = useRef(store.sidebarOpen);
 
-  useLayoutEffect(() => {
-    const measureTarget = contentWrapperRef.current;
+  // Stable callback to update height
+  const updateHeight = useCallback(() => {
     const container = containerRef.current;
-    if (!measureTarget || !container) return;
+    const content = contentWrapper;
+    
+    if (!container || !content) return;
 
-    const handleResize = (entries: ResizeObserverEntry[]) => {
-      if (!store.sidebarOpen) {
-        container.style.height = '56px';
-        return;
-      }
-      
-      const contentHeight = entries[0].contentRect.height;
-      const padding = 32; 
-      container.style.height = `${contentHeight + padding}px`;
+    if (!sidebarOpenRef.current) {
+         container.style.height = '56px'; // Collapsed height
+         return;
+    }
+    
+    // Measure content height (ceil to avoid sub-pixel jitter loops)
+    const contentHeight = Math.ceil(content.offsetHeight);
+    const padding = 32; // 1rem (16px) top + 1rem (16px) bottom padding from LiquidContainer
+    const totalHeight = contentHeight + padding;
+    
+    container.style.height = `${totalHeight}px`;
+  }, [contentWrapper]);
+
+  // Sync sidebar state and force immediate update
+  useEffect(() => {
+    sidebarOpenRef.current = store.sidebarOpen;
+    updateHeight();
+  }, [store.sidebarOpen, updateHeight]);
+
+  // ResizeObserver Logic
+  useLayoutEffect(() => {
+    if (!contentWrapper) return;
+
+    let rafId: number;
+    let isActive = true;
+
+    const handleResize = () => {
+        if (!isActive) return;
+        // Debounce updates via RequestAnimationFrame to prevent thrashing
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateHeight);
     };
 
     const ro = new ResizeObserver(handleResize);
-    ro.observe(measureTarget);
+    ro.observe(contentWrapper);
     
-    // Immediate state sync
-    if (store.sidebarOpen) {
-      container.style.height = `${measureTarget.offsetHeight + 32}px`;
-    } else {
-      container.style.height = '56px';
-    }
+    // Also listen to window resize (responsive text wrapping changes height)
+    window.addEventListener('resize', handleResize);
+    
+    // Initial calculation
+    handleResize();
 
-    return () => ro.disconnect();
-  }, [store.sidebarOpen]);
+    return () => {
+        isActive = false;
+        ro.disconnect();
+        window.removeEventListener('resize', handleResize);
+        cancelAnimationFrame(rafId);
+    };
+  }, [contentWrapper, updateHeight]);
 
+  // Trigger entry animation
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Calibration State
   const [monitorSize, setMonitorSize] = useState<string>('24');
   const [resW, setResW] = useState<string>(window.screen.width.toString());
   const [resH, setResH] = useState<string>(window.screen.height.toString());
@@ -240,7 +290,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     }
   };
 
-  const handle1to1 = () => apply1to1Scale(controlsRef.current, store.ppi);
+  const handle1to1 = () => {
+    apply1to1Scale(controlsRef.current, store.ppi);
+  };
 
   const calculatePPI = () => {
     const w = parseFloat(resW);
@@ -248,42 +300,50 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     const d = parseFloat(monitorSize);
     if (w && h && d) {
       const diagonalPixels = Math.sqrt(w * w + h * h);
-      store.setPPI(diagonalPixels / d);
+      const calculatedPPI = diagonalPixels / d;
+      store.setPPI(calculatedPPI);
     }
   };
 
+  // Visual state
   const showModelTools = !!store.selectedModelId;
   const showSnap = showModelTools && store.gizmoMode === 'rotate';
+  const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
   return (
     <>
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-
       <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden">
         
-        {/* LEFT SIDEBAR */}
+        {/* LEFT SIDEBAR: Collapsible */}
         <div 
           ref={containerRef}
           className={`
             absolute left-4 top-4 
-            transition-[width,opacity,transform] duration-500 ease-out pointer-events-auto flex flex-col overflow-hidden
+            transition-all duration-500 ${easingClass} pointer-events-auto flex flex-col overflow-hidden
             ${store.sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
             ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
           `}
           style={{ 
-            maxHeight: '90vh',
-            transitionProperty: 'width, opacity, transform, height',
-            transitionDuration: '500ms'
+             maxHeight: '90vh',
+             height: '56px' // Start collapsed/default, JS will override immediately
           }}
         >
           <LiquidContainer className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
+            
+            {/* Scrollable Container with Hidden Scrollbar */}
+            {/* This ensures that if content exceeds max height, we scroll internally */}
             <div className="h-full overflow-y-auto no-scrollbar relative">
-                <div ref={contentWrapperRef} className="flex flex-col">
+                
+                {/* Measurement Wrapper: This div grows freely with content */}
+                {/* We attach the ref callback here to monitor size */}
+                <div ref={setContentWrapper} className="flex flex-col">
+                    
+                    {/* Header (Always Visible) */}
                     <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-0.5 mb-0">
-                        <div className="flex items-center gap-2"><AnimatedLogo /></div>
+                        <div className="flex items-center gap-2">
+                            <AnimatedLogo />
+                        </div>
+                        
                         <div className="flex items-center gap-1">
                             {store.sidebarOpen && (
                                 <button 
@@ -302,80 +362,151 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         </div>
                     </div>
 
-                    <div className={`flex flex-col transition-all duration-500 ease-out ${store.sidebarOpen ? 'mt-4 opacity-100 translate-y-0' : 'mt-0 opacity-0 -translate-y-4 pointer-events-none h-0 overflow-hidden'}`}>
-                        {/* About */}
-                        <div className={`overflow-hidden transition-all duration-500 ease-out ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
+                    {/* Collapsible Content */}
+                    <div 
+                        className={`
+                            flex flex-col transition-all duration-500 ${easingClass}
+                            ${store.sidebarOpen ? 'mt-4 opacity-100 translate-y-0 delay-100' : 'mt-0 opacity-0 -translate-y-4 pointer-events-none h-0 overflow-hidden'}
+                        `}
+                    >
+                    
+                        {/* About Section */}
+                        <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
                             <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
                                 <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
                                 <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
                                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                    <span>Creator: <a href="https://www.instagram.com/dexterchock/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400">Dexter Chock</a></span>
+                                    <span>
+                                        Creator: <a 
+                                            href="https://www.instagram.com/dexterchock/" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="hover:text-blue-400 transition-colors cursor-pointer border-b border-transparent hover:border-blue-400/30"
+                                        >
+                                            Dexter Chock
+                                        </a>
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Tabs */}
                         <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
-                            {(['models', 'calibration'] as const).map(tab => (
-                                <button 
-                                  key={tab}
-                                  onClick={() => setActiveTab(tab)}
-                                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === tab ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/80'}`}
-                                >
-                                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                                </button>
-                            ))}
+                            <button 
+                            onClick={() => setActiveTab('models')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'models' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                            >
+                            Models
+                            </button>
+                            <button 
+                            onClick={() => setActiveTab('calibration')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'calibration' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                            >
+                            Calibration
+                            </button>
                         </div>
 
+                        {/* TAB CONTENT: MODELS */}
                         {activeTab === 'models' && (
                             <div className="flex flex-col animate-in fade-in duration-300">
+                                {/* Upload Area */}
                                 <div className="mb-4 shrink-0">
                                     <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                                      <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
-                                      <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
-                                      <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
+                                    <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
+                                    <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
+                                    <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
                                     </label>
                                 </div>
+
+                                {/* Model List */}
                                 <div className="flex-1 mb-2 max-h-[50vh] overflow-y-auto no-scrollbar">
                                     <h3 className="text-xs font-mono uppercase text-white/40 mb-2">Active Models</h3>
                                     <div className="space-y-2">
-                                      {store.models.length === 0 ? (
+                                    {store.models.length === 0 && (
                                         <div className="flex flex-col items-center gap-2 p-2">
                                             <div className="text-sm text-white/20 italic">No models loaded.</div>
-                                            <button onClick={() => store.addExampleModel()} className="text-xs text-blue-400 hover:text-blue-300 underline">Try Example</button>
+                                            <button 
+                                                onClick={() => store.addExampleModel()}
+                                                className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                                            >
+                                                Try Example
+                                            </button>
                                         </div>
-                                      ) : store.models.map((model) => <ModelListItem key={model.id} model={model} />)}
+                                    )}
+                                    {store.models.map((model) => (
+                                        <ModelListItem key={model.id} model={model} />
+                                    ))}
                                     </div>
                                 </div>
                             </div>
                         )}
 
+                        {/* TAB CONTENT: CALIBRATION */}
                         {activeTab === 'calibration' && (
                             <div className="flex flex-col animate-in fade-in duration-300 pb-1">
-                                <p className="text-xs text-white/60 mb-4 leading-relaxed">For true 1:1 scale, the app needs your specific pixel density (PPI).</p>
+                                <p className="text-xs text-white/60 mb-4 leading-relaxed">
+                                For true 1:1 scale, the app needs to know your specific pixel density (PPI).
+                                </p>
+
+                                {/* Calculator Section */}
                                 <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
-                                  <h3 className="text-xs font-bold text-white/80 mb-3 uppercase">Auto Calculate</h3>
-                                  <div className="grid grid-cols-2 gap-2 mb-2">
-                                    {[{l:'Width (px)', v:resW, s:setResW}, {l:'Height (px)', v:resH, s:setResH}].map(i => (
-                                      <div key={i.l}>
-                                        <label className="text-[10px] text-white/40 block mb-1">{i.l}</label>
-                                        <input type="number" value={i.v} onChange={(e) => i.s(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white" />
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="mb-3">
-                                    <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
-                                    <input type="number" value={monitorSize} onChange={(e) => setMonitorSize(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white" />
-                                  </div>
-                                  <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">Calculate PPI</LiquidButton>
+                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Auto Calculate</h3>
+                                
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <div>
+                                    <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={resW} 
+                                        onChange={(e) => setResW(e.target.value)} 
+                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                    </div>
+                                    <div>
+                                    <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={resH} 
+                                        onChange={(e) => setResH(e.target.value)} 
+                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                    </div>
                                 </div>
+                                
+                                <div className="mb-3">
+                                    <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
+                                    <input 
+                                    type="number" 
+                                    value={monitorSize} 
+                                    onChange={(e) => setMonitorSize(e.target.value)} 
+                                    placeholder="e.g. 24, 27, 13.3"
+                                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                </div>
+
+                                <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">
+                                    Calculate PPI
+                                </LiquidButton>
+                                </div>
+
+                                {/* Manual Controls - Replaced with Modal Trigger */}
                                 <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
-                                  <h3 className="text-xs font-bold text-white/80 mb-3 uppercase">Manual Adjustment</h3>
-                                  <div className="text-center mb-4">
+                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Manual Adjustment</h3>
+                                <p className="text-[10px] text-white/40 mb-3">
+                                    Use a physical credit card to calibrate the scale precisely.
+                                </p>
+                                
+                                <div className="text-center mb-4">
                                     <span className="text-xl font-bold font-mono text-blue-400">{store.ppi.toFixed(1)}</span>
                                     <span className="text-[10px] text-white/40 ml-1">PPI</span>
-                                  </div>
-                                  <LiquidButton onClick={() => store.setCalibrationModalOpen(true)} className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30">Open Manual Calibration</LiquidButton>
+                                </div>
+
+                                <LiquidButton 
+                                    onClick={() => store.setCalibrationModalOpen(true)}
+                                    className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
+                                >
+                                    Open Manual Calibration
+                                </LiquidButton>
                                 </div>
                             </div>
                         )}
@@ -386,23 +517,91 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         </div>
 
         {/* BOTTOM CONTROL PILL */}
-        <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-700 ease-out delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <div 
+          className={`
+             absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
+             transition-all duration-700 ${easingClass} delay-100
+             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
+          `}
+        >
+          {/* Main Pill Container - P-0 allows full-bleed buttons */}
           <LiquidContainer className="flex items-center gap-0 p-0 rounded-full overflow-hidden">
+            
+            {/* Axis Views Group */}
             {(['X', 'Y', 'Z'] as const).map((axis) => (
-              <button key={axis} onClick={() => transitionToAxis(controlsRef.current, axis)} className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors">{axis}</button>
+               <button
+                  key={axis}
+                  onClick={() => transitionToAxis(controlsRef.current, axis)}
+                  className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
+               >
+                 {axis}
+               </button>
             ))}
 
-            <div className={`flex overflow-hidden transition-all duration-500 ease-out ${showModelTools ? 'max-w-[12rem] opacity-100' : 'max-w-0 opacity-0'}`}>
-                <button onClick={() => store.setGizmoMode('translate')} className={`h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors ${store.gizmoMode === 'translate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Move"><MoveIcon /></button>
-                <button onClick={() => store.setGizmoMode('rotate')} className={`h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors ${store.gizmoMode === 'rotate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Rotate"><RotateIcon /></button>
-                <div className={`overflow-hidden transition-all duration-300 ease-out ${showSnap ? 'w-10 opacity-100' : 'w-0 opacity-0'}`}>
-                  <button onClick={() => store.setRotationSnap(store.rotationSnap ? null : 45)} className={`h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}`} title="Snap"><MagnetIcon /></button>
+            {/* Model Tools - Animated Wrapper */}
+            <div 
+                className={`
+                    flex overflow-hidden transition-all duration-500 ${easingClass}
+                    ${showModelTools ? 'max-w-[12rem] opacity-100' : 'max-w-0 opacity-0'}
+                `}
+            >
+                <button
+                    onClick={() => store.setGizmoMode('translate')}
+                    className={`
+                        h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors
+                        ${store.gizmoMode === 'translate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
+                    `}
+                    title="Move"
+                >
+                    <MoveIcon />
+                </button>
+
+                <button
+                    onClick={() => store.setGizmoMode('rotate')}
+                    className={`
+                        h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors
+                        ${store.gizmoMode === 'rotate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
+                    `}
+                    title="Rotate"
+                >
+                    <RotateIcon />
+                </button>
+
+                {/* Snap Button - Slide Out */}
+                <div className={`
+                    overflow-hidden transition-all duration-300 ease-out
+                    ${showSnap ? 'w-10 opacity-100' : 'w-0 opacity-0'}
+                `}>
+                     <button
+                        onClick={() => store.setRotationSnap(store.rotationSnap ? null : 45)}
+                        className={`
+                            h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors
+                            ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
+                        `}
+                        title="Snap"
+                     >
+                        <MagnetIcon />
+                     </button>
                 </div>
             </div>
 
-            <button onClick={handle1to1} className={`h-10 px-5 flex items-center justify-center text-xs font-bold tracking-wider transition-all duration-300 ${store.is1to1Mode ? 'bg-blue-600 text-white' : 'bg-transparent text-white/40 hover:bg-white/5 hover:text-white'}`}>1:1</button>
+            {/* 1:1 Button - End Cap */}
+            <button 
+                onClick={handle1to1}
+                className={`
+                    h-10 px-5 flex items-center justify-center 
+                    text-xs font-bold tracking-wider transition-all duration-300
+                    ${store.is1to1Mode 
+                        ? 'bg-blue-600 text-white shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]' 
+                        : 'bg-transparent text-white/40 hover:bg-white/5 hover:text-white'}
+                `}
+            >
+                1:1
+            </button>
+
           </LiquidContainer>
         </div>
+
       </div>
     </>
   );
