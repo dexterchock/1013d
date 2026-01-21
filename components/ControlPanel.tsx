@@ -211,6 +211,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Height Animation Logic using direct DOM manipulation for performance
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const content = contentRef.current;
@@ -219,26 +220,35 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
     // 1. Define the update function
     const updateHeight = () => {
+         let targetHeight = '0px';
+
          if (!store.sidebarOpen) {
-             container.style.height = '56px'; // Collapsed height (h-14)
-             // Force scroll to top when collapsed to ensure header is always visible
+             targetHeight = '56px'; // Collapsed height (h-14)
              content.scrollTop = 0; 
-             return;
+         } else {
+             // Measure content height (scroll height to account for overflow) and add padding (p-4 = 32px)
+             const contentHeight = content.scrollHeight; 
+             const totalHeight = contentHeight + 32;
+             targetHeight = `${totalHeight}px`;
          }
          
-         // Measure content height (scroll height to account for overflow) and add padding (p-4 = 32px)
-         const contentHeight = content.scrollHeight; 
-         const totalHeight = contentHeight + 32;
-         
-         container.style.height = `${totalHeight}px`;
+         // Fix: Only apply if changed to prevent ResizeObserver loop
+         if (container.style.height !== targetHeight) {
+             container.style.height = targetHeight;
+         }
     };
 
     // 2. Initial sync
     updateHeight();
 
-    // 3. Set up ResizeObserver
+    // 3. Set up ResizeObserver with Debounced rAF
     const ro = new ResizeObserver(() => {
-        updateHeight();
+        if (!rafRef.current) {
+            rafRef.current = requestAnimationFrame(() => {
+                updateHeight();
+                rafRef.current = null;
+            });
+        }
     });
     ro.observe(content);
 
@@ -251,7 +261,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     
     const intervalId = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        updateHeight();
+        // Also use rAF for interval updates to stay synced
+        if (!rafRef.current) {
+            rafRef.current = requestAnimationFrame(() => {
+                updateHeight();
+                rafRef.current = null;
+            });
+        }
         
         if (elapsed > animationDuration) {
             clearInterval(intervalId);
@@ -261,6 +277,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     return () => {
         ro.disconnect();
         clearInterval(intervalId);
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+        }
     };
   }, [store.sidebarOpen, store.selectedModelId, activeTab, store.models.length, showAbout]); 
 

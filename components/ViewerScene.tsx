@@ -6,19 +6,6 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { ModelWrapper } from './Model';
 
-// Fix for missing R3F types
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      ambientLight: any;
-      directionalLight: any;
-      spotLight: any;
-      rectAreaLight: any;
-      primitive: any;
-    }
-  }
-}
-
 // Camera Controls Actions
 const ACTION = {
   NONE: 0,

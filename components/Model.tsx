@@ -9,19 +9,6 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Fix for missing R3F types
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      primitive: any;
-      group: any;
-      mesh: any;
-      boxGeometry: any;
-      meshStandardMaterial: any;
-    }
-  }
-}
-
 interface ModelWrapperProps {
   modelData: LoadedModel;
   index: number;
@@ -139,7 +126,7 @@ const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, 
 const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const geom = useLoader(STLLoader, url);
   const mesh = useMemo(() => new THREE.Mesh(geom), [geom]);
-  return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
+  return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
 };
 
 const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
