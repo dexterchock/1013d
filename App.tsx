@@ -5,10 +5,13 @@ import { Overlay } from './components/ControlPanel';
 import { AuraEffect } from './components/AuraEffect';
 import { CalibrationModal } from './components/CalibrationModal';
 import { CameraControls } from '@react-three/drei';
+import { useStore } from './store';
 
 function App() {
   const controlsRef = useRef<CameraControls>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const addModels = useStore((state) => state.addModels);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     // Slight delay ensures the browser has painted the initial frame of the UI 
@@ -35,12 +38,52 @@ function App() {
     };
   }, []);
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Only cancel dragging if we actually leave the window (relatedTarget is null or out of scope)
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addModels(Array.from(e.dataTransfer.files));
+    }
+  };
+
   return (
-    <div className="w-screen h-screen relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden">
+    <div 
+        className="w-screen h-screen relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+    >
       
       {/* Background Gradient for depth */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] to-[#000000] pointer-events-none" />
       
+      {/* Drag Overlay Feedback */}
+      <div 
+        className={`
+          absolute inset-4 z-[200] border-2 border-dashed border-blue-500/50 bg-black/60 backdrop-blur-sm rounded-2xl 
+          flex items-center justify-center pointer-events-none transition-opacity duration-300 
+          ${isDragging ? 'opacity-100' : 'opacity-0'}
+        `}
+      >
+        <div className="text-blue-400 font-mono text-xl tracking-widest uppercase animate-pulse">
+            Drop Files to Import
+        </div>
+      </div>
+
       {/* 3D Scene */}
       <ViewerScene controlsRef={controlsRef} />
 

@@ -21,6 +21,13 @@ export interface ViewerState {
   
   // Modal State
   isCalibrationModalOpen: boolean;
+  
+  // Calibration Calculator Persistence
+  calibrationSettings: {
+    resolutionWidth: number;
+    resolutionHeight: number;
+    diagonalInches: number;
+  };
 
   // Auto-layout state
   modelDimensions: Record<string, { x: number; y: number; z: number }>;
@@ -29,11 +36,12 @@ export interface ViewerState {
   modelScales: Record<string, { x: number; y: number; z: number }>;
 
   // Actions
-  addModels: (files: File[]) => void;
+  addModels: (files: File[], isInternal?: boolean) => void;
   addExampleModel: () => void;
   removeModel: (id: string) => void;
   selectModel: (id: string | null) => void; // Action to select/deselect
   setPPI: (ppi: number) => void;
+  setCalibrationSettings: (settings: Partial<ViewerState['calibrationSettings']>) => void;
   toggleGrid: () => void;
   setGizmoMode: (mode: 'translate' | 'rotate' | 'scale') => void;
   setRotationSnap: (angleDeg: number | null) => void;

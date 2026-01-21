@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
@@ -220,6 +221,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     const updateHeight = () => {
          if (!store.sidebarOpen) {
              container.style.height = '56px'; // Collapsed height (h-14)
+             // Force scroll to top when collapsed to ensure header is always visible
+             content.scrollTop = 0; 
              return;
          }
          
@@ -266,10 +269,17 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     setMounted(true);
   }, []);
 
-  // Calibration State
-  const [monitorSize, setMonitorSize] = useState<string>('24');
-  const [resW, setResW] = useState<string>(window.screen.width.toString());
-  const [resH, setResH] = useState<string>(window.screen.height.toString());
+  // Calibration State (Synced with Store)
+  const { resolutionWidth, resolutionHeight, diagonalInches } = store.calibrationSettings;
+
+  const updateCalibration = (key: keyof typeof store.calibrationSettings, value: string) => {
+      const num = parseFloat(value);
+      // We allow the input to be empty string for typing, but only update store with valid numbers or keep old logic if needed.
+      // For simplicity, we can just update the store with whatever number we parse, or 0.
+      if (!isNaN(num)) {
+          store.setCalibrationSettings({ [key]: num });
+      }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -284,12 +294,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   };
 
   const calculatePPI = () => {
-    const w = parseFloat(resW);
-    const h = parseFloat(resH);
-    const d = parseFloat(monitorSize);
-    if (w && h && d) {
-      const diagonalPixels = Math.sqrt(w * w + h * h);
-      const calculatedPPI = diagonalPixels / d;
+    if (resolutionWidth && resolutionHeight && diagonalInches) {
+      const diagonalPixels = Math.sqrt(resolutionWidth * resolutionWidth + resolutionHeight * resolutionHeight);
+      const calculatedPPI = diagonalPixels / diagonalInches;
       store.setPPI(calculatedPPI);
     }
   };
@@ -317,10 +324,19 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           }}
         >
           <LiquidContainer className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
-            <div ref={contentRef} className="flex flex-col max-h-full overflow-y-auto no-scrollbar">
+            <div 
+                ref={contentRef} 
+                // Toggle overflow based on sidebar state to prevent scrolling when collapsed
+                className={`flex flex-col max-h-full no-scrollbar ${store.sidebarOpen ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            >
                 {/* Header (Always Visible) */}
                 <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-0.5 mb-0">
-                    <div className="flex items-center gap-2">
+                    <div 
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={store.toggleSidebar}
+                        role="button"
+                        aria-label="Toggle sidebar"
+                    >
                          <AnimatedLogo />
                     </div>
                     
@@ -439,8 +455,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                                 id="res-width"
                                 name="res-width"
                                 type="number" 
-                                value={resW} 
-                                onChange={(e) => setResW(e.target.value)} 
+                                value={resolutionWidth} 
+                                onChange={(e) => updateCalibration('resolutionWidth', e.target.value)} 
                                 className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
                             />
                             </div>
@@ -450,8 +466,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                                 id="res-height"
                                 name="res-height"
                                 type="number" 
-                                value={resH} 
-                                onChange={(e) => setResH(e.target.value)} 
+                                value={resolutionHeight} 
+                                onChange={(e) => updateCalibration('resolutionHeight', e.target.value)} 
                                 className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
                             />
                             </div>
@@ -463,8 +479,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             id="monitor-size"
                             name="monitor-size"
                             type="number" 
-                            value={monitorSize} 
-                            onChange={(e) => setMonitorSize(e.target.value)} 
+                            value={diagonalInches} 
+                            onChange={(e) => updateCalibration('diagonalInches', e.target.value)} 
                             placeholder="e.g. 24, 27, 13.3"
                             className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
                             />
