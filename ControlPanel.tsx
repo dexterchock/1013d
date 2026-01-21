@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
@@ -119,15 +118,12 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const pos = store.modelPositions[model.id] || {x:0, y:0, z:0};
     const rot = store.modelRotations[model.id] || {x:0, y:0, z:0};
     const scale = store.modelScales[model.id] || {x:1, y:1, z:1};
-    
-    // Hardcoded bezier for Tailwind to ensure it works
-    const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
     return (
         <div 
             onClick={() => store.selectModel(model.id)}
             className={`
-                flex flex-col rounded-lg border cursor-pointer transition-all duration-500 ${easingClass} overflow-hidden
+                flex flex-col rounded-lg border cursor-pointer transition-all duration-500 ease-out overflow-hidden
                 ${isSelected 
                     ? 'bg-black/40 border-white/10 shadow-lg' 
                     : 'bg-white/5 border-white/5 hover:border-white/20'
@@ -150,7 +146,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
 
             <div 
                 className={`
-                    grid transition-[grid-template-rows] duration-500 ${easingClass}
+                    grid transition-[grid-template-rows] duration-500 ease-out
                     ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}
                 `}
                 onClick={(e) => e.stopPropagation()}
@@ -216,12 +212,6 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Sync ref when state changes
   useEffect(() => {
     sidebarOpenRef.current = store.sidebarOpen;
-    // Force a manual check when state toggles to ensure animation starts immediately
-    if (contentWrapperRef.current && containerRef.current) {
-        // We trigger a "fake" resize logic here to ensure sync
-        const height = store.sidebarOpen ? contentWrapperRef.current.offsetHeight + 32 : 56;
-        containerRef.current.style.height = `${height}px`;
-    }
   }, [store.sidebarOpen]);
 
   useLayoutEffect(() => {
@@ -230,23 +220,22 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     
     if (!measureTarget || !container) return;
 
-    // The logic is self-contained and uses the Ref for current state
     const handleResize = () => {
-         // If sidebar is closed, force collapsed height
-         if (!sidebarOpenRef.current) {
-             container.style.height = '56px'; 
-             return;
-         }
-         
-         const contentHeight = measureTarget.offsetHeight; 
-         const padding = 32; // 1rem top + 1rem bottom padding from LiquidContainer
-         const totalHeight = contentHeight + padding;
-         
-         container.style.height = `${totalHeight}px`;
+      // If sidebar is closed, force collapsed height
+      if (!sidebarOpenRef.current) {
+        container.style.height = '56px'; 
+        return;
+      }
+      
+      const contentHeight = measureTarget.offsetHeight; 
+      const padding = 32; // 1rem top + 1rem bottom padding from LiquidContainer
+      const totalHeight = contentHeight + padding;
+      
+      container.style.height = `${totalHeight}px`;
     };
 
     const ro = new ResizeObserver(() => {
-        requestAnimationFrame(handleResize);
+      requestAnimationFrame(handleResize);
     });
     
     ro.observe(measureTarget);
@@ -255,7 +244,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     handleResize();
 
     return () => ro.disconnect();
-  }, []); // Empty dependency array ensures RO is created ONCE and never disconnected
+  }, []); // Empty dependency array ensures RO is created ONCE
 
   // Trigger entry animation
   useEffect(() => {
@@ -293,10 +282,19 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Visual state
   const showModelTools = !!store.selectedModelId;
   const showSnap = showModelTools && store.gizmoMode === 'rotate';
-  const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
   return (
     <>
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+
       <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden">
         
         {/* LEFT SIDEBAR: Collapsible */}
@@ -304,19 +302,18 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           ref={containerRef}
           className={`
             absolute left-4 top-4 
-            transition-all duration-500 ${easingClass} pointer-events-auto flex flex-col overflow-hidden
+            transition-all duration-500 ease-out pointer-events-auto flex flex-col overflow-hidden
             ${store.sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
             ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
           `}
           style={{ 
-             maxHeight: '90vh',
-             height: '56px' // Start collapsed/default, JS will override immediately
+            maxHeight: '90vh',
+            height: '56px'
           }}
         >
           <LiquidContainer className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
             
             {/* Scrollable Container with Hidden Scrollbar */}
-            {/* This ensures that if content exceeds max height, we scroll internally */}
             <div className="h-full overflow-y-auto no-scrollbar relative">
                 
                 {/* Measurement Wrapper: This div grows freely with content */}
@@ -349,13 +346,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     {/* Collapsible Content */}
                     <div 
                         className={`
-                            flex flex-col transition-all duration-500 ${easingClass}
+                            flex flex-col transition-all duration-500 ease-out
                             ${store.sidebarOpen ? 'mt-4 opacity-100 translate-y-0 delay-100' : 'mt-0 opacity-0 -translate-y-4 pointer-events-none h-0 overflow-hidden'}
                         `}
                     >
                     
                         {/* About Section */}
-                        <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
+                        <div className={`overflow-hidden transition-all duration-500 ease-out ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
                             <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
                                 <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
                                 <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
@@ -377,16 +374,16 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         {/* Tabs */}
                         <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
                             <button 
-                            onClick={() => setActiveTab('models')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'models' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                              onClick={() => setActiveTab('models')}
+                              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'models' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
                             >
-                            Models
+                              Models
                             </button>
                             <button 
-                            onClick={() => setActiveTab('calibration')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'calibration' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                              onClick={() => setActiveTab('calibration')}
+                              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'calibration' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
                             >
-                            Calibration
+                              Calibration
                             </button>
                         </div>
 
@@ -396,9 +393,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                                 {/* Upload Area */}
                                 <div className="mb-4 shrink-0">
                                     <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                                    <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
-                                    <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
-                                    <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
+                                      <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
+                                      <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
+                                      <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
                                     </label>
                                 </div>
 
@@ -406,7 +403,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                                 <div className="flex-1 mb-2 max-h-[50vh] overflow-y-auto no-scrollbar">
                                     <h3 className="text-xs font-mono uppercase text-white/40 mb-2">Active Models</h3>
                                     <div className="space-y-2">
-                                    {store.models.length === 0 && (
+                                      {store.models.length === 0 && (
                                         <div className="flex flex-col items-center gap-2 p-2">
                                             <div className="text-sm text-white/20 italic">No models loaded.</div>
                                             <button 
@@ -416,10 +413,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                                                 Try Example
                                             </button>
                                         </div>
-                                    )}
-                                    {store.models.map((model) => (
+                                      )}
+                                      {store.models.map((model) => (
                                         <ModelListItem key={model.id} model={model} />
-                                    ))}
+                                      ))}
                                     </div>
                                 </div>
                             </div>
@@ -429,68 +426,68 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         {activeTab === 'calibration' && (
                             <div className="flex flex-col animate-in fade-in duration-300 pb-1">
                                 <p className="text-xs text-white/60 mb-4 leading-relaxed">
-                                For true 1:1 scale, the app needs to know your specific pixel density (PPI).
+                                  For true 1:1 scale, the app needs to know your specific pixel density (PPI).
                                 </p>
 
                                 {/* Calculator Section */}
                                 <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
-                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Auto Calculate</h3>
-                                
-                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                  <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Auto Calculate</h3>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 mb-2">
                                     <div>
-                                    <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
-                                    <input 
+                                      <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
+                                      <input 
                                         type="number" 
                                         value={resW} 
                                         onChange={(e) => setResW(e.target.value)} 
                                         className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
-                                    />
+                                      />
                                     </div>
                                     <div>
-                                    <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
-                                    <input 
+                                      <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
+                                      <input 
                                         type="number" 
                                         value={resH} 
                                         onChange={(e) => setResH(e.target.value)} 
                                         className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
-                                    />
+                                      />
                                     </div>
-                                </div>
-                                
-                                <div className="mb-3">
+                                  </div>
+                                  
+                                  <div className="mb-3">
                                     <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
                                     <input 
-                                    type="number" 
-                                    value={monitorSize} 
-                                    onChange={(e) => setMonitorSize(e.target.value)} 
-                                    placeholder="e.g. 24, 27, 13.3"
-                                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                      type="number" 
+                                      value={monitorSize} 
+                                      onChange={(e) => setMonitorSize(e.target.value)} 
+                                      placeholder="e.g. 24, 27, 13.3"
+                                      className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
                                     />
-                                </div>
+                                  </div>
 
-                                <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">
+                                  <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">
                                     Calculate PPI
-                                </LiquidButton>
+                                  </LiquidButton>
                                 </div>
 
-                                {/* Manual Controls - Replaced with Modal Trigger */}
+                                {/* Manual Controls */}
                                 <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
-                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Manual Adjustment</h3>
-                                <p className="text-[10px] text-white/40 mb-3">
+                                  <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Manual Adjustment</h3>
+                                  <p className="text-[10px] text-white/40 mb-3">
                                     Use a physical credit card to calibrate the scale precisely.
-                                </p>
-                                
-                                <div className="text-center mb-4">
+                                  </p>
+                                  
+                                  <div className="text-center mb-4">
                                     <span className="text-xl font-bold font-mono text-blue-400">{store.ppi.toFixed(1)}</span>
                                     <span className="text-[10px] text-white/40 ml-1">PPI</span>
-                                </div>
+                                  </div>
 
-                                <LiquidButton 
+                                  <LiquidButton 
                                     onClick={() => store.setCalibrationModalOpen(true)}
                                     className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
-                                >
+                                  >
                                     Open Manual Calibration
-                                </LiquidButton>
+                                  </LiquidButton>
                                 </div>
                             </div>
                         )}
@@ -503,29 +500,29 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         {/* BOTTOM CONTROL PILL */}
         <div 
           className={`
-             absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
-             transition-all duration-700 ${easingClass} delay-100
-             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
+            absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
+            transition-all duration-700 ease-out delay-100
+            ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
-          {/* Main Pill Container - P-0 allows full-bleed buttons */}
+          {/* Main Pill Container */}
           <LiquidContainer className="flex items-center gap-0 p-0 rounded-full overflow-hidden">
             
             {/* Axis Views Group */}
             {(['X', 'Y', 'Z'] as const).map((axis) => (
-               <button
-                  key={axis}
-                  onClick={() => transitionToAxis(controlsRef.current, axis)}
-                  className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
-               >
-                 {axis}
-               </button>
+              <button
+                key={axis}
+                onClick={() => transitionToAxis(controlsRef.current, axis)}
+                className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
+              >
+                {axis}
+              </button>
             ))}
 
             {/* Model Tools - Animated Wrapper */}
             <div 
                 className={`
-                    flex overflow-hidden transition-all duration-500 ${easingClass}
+                    flex overflow-hidden transition-all duration-500 ease-out
                     ${showModelTools ? 'max-w-[12rem] opacity-100' : 'max-w-0 opacity-0'}
                 `}
             >
@@ -556,16 +553,16 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     overflow-hidden transition-all duration-300 ease-out
                     ${showSnap ? 'w-10 opacity-100' : 'w-0 opacity-0'}
                 `}>
-                     <button
-                        onClick={() => store.setRotationSnap(store.rotationSnap ? null : 45)}
-                        className={`
-                            h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors
-                            ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
-                        `}
-                        title="Snap"
-                     >
-                        <MagnetIcon />
-                     </button>
+                  <button
+                    onClick={() => store.setRotationSnap(store.rotationSnap ? null : 45)}
+                    className={`
+                        h-10 w-10 flex items-center justify-center border-r border-white/10 transition-colors
+                        ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
+                    `}
+                    title="Snap"
+                  >
+                    <MagnetIcon />
+                  </button>
                 </div>
             </div>
 
