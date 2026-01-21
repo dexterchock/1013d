@@ -55,7 +55,8 @@ export const CalibrationModal: React.FC = () => {
             ? 'opacity-100 visible pointer-events-auto backdrop-blur-md' 
             : 'opacity-0 invisible pointer-events-none backdrop-blur-none delay-0'}
       `}
-      aria-hidden={!isOpen}
+      // Using inert prevents focus on hidden elements, solving the "aria-hidden with focus" warning
+      {...({ inert: !isOpen ? "" : undefined } as any)}
     >
       {/* Background Gradient */}
       <div 
@@ -148,6 +149,9 @@ export const CalibrationModal: React.FC = () => {
                     <div className="flex items-center gap-4">
                         <span className="text-xs font-mono text-white/40">50</span>
                         <input 
+                            id="ppi-slider"
+                            name="ppi-slider"
+                            aria-label="PPI Adjustment Slider"
                             type="range" min="50" max="400" step="0.5"
                             value={ppi} 
                             onChange={(e) => {
@@ -161,9 +165,11 @@ export const CalibrationModal: React.FC = () => {
                     
                     <div className="flex items-center justify-between">
                          <div className="flex flex-col">
-                            <span className="text-xs text-white/40 uppercase tracking-widest mb-1">Current Density</span>
+                            <label htmlFor="ppi-value-input" className="text-xs text-white/40 uppercase tracking-widest mb-1">Current Density</label>
                             <div className="flex items-center gap-2">
                                  <input 
+                                    id="ppi-value-input"
+                                    name="ppi-value-input"
                                     type="number"
                                     inputMode="decimal"
                                     value={inputValue}

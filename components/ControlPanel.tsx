@@ -53,7 +53,8 @@ const NumberInput: React.FC<{
     value: number; 
     onChange: (val: number) => void;
     step?: number;
-}> = ({ label, value, onChange, step = 1 }) => {
+    id?: string;
+}> = ({ label, value, onChange, step = 1, id }) => {
     const [localVal, setLocalVal] = useState(value.toString());
 
     useEffect(() => {
@@ -70,16 +71,18 @@ const NumberInput: React.FC<{
     };
 
     return (
-        <div className="flex items-center gap-2 bg-black/20 rounded px-2 py-1 border border-white/5 focus-within:border-white/20 transition-colors duration-200">
+        <label className="flex items-center gap-2 bg-black/20 rounded px-2 py-1 border border-white/5 focus-within:border-white/20 transition-colors duration-200 cursor-text">
             <span className="text-[10px] font-mono text-white/40 w-2">{label}</span>
             <input 
+                id={id}
+                name={id}
                 type="number"
                 step={step}
                 className="w-full bg-transparent text-xs text-white outline-none text-right font-mono"
                 value={localVal}
                 onChange={handleChange}
             />
-        </div>
+        </label>
     );
 };
 
@@ -164,31 +167,31 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                         <div className="space-y-3">
                             {/* Position */}
                             <div>
-                                <label className="text-[9px] text-white/30 uppercase mb-1 block">Position (mm)</label>
+                                <span className="text-[9px] text-white/30 uppercase mb-1 block">Position (mm)</span>
                                 <div className="grid grid-cols-3 gap-1">
-                                    <NumberInput label="X" value={Math.round(pos.x * 100) / 100} onChange={(v) => updateTransform('position', 'x', v)} />
-                                    <NumberInput label="Y" value={Math.round(pos.y * 100) / 100} onChange={(v) => updateTransform('position', 'y', v)} />
-                                    <NumberInput label="Z" value={Math.round(pos.z * 100) / 100} onChange={(v) => updateTransform('position', 'z', v)} />
+                                    <NumberInput id={`pos-x-${model.id}`} label="X" value={Math.round(pos.x * 100) / 100} onChange={(v) => updateTransform('position', 'x', v)} />
+                                    <NumberInput id={`pos-y-${model.id}`} label="Y" value={Math.round(pos.y * 100) / 100} onChange={(v) => updateTransform('position', 'y', v)} />
+                                    <NumberInput id={`pos-z-${model.id}`} label="Z" value={Math.round(pos.z * 100) / 100} onChange={(v) => updateTransform('position', 'z', v)} />
                                 </div>
                             </div>
 
                             {/* Rotation */}
                             <div>
-                                <label className="text-[9px] text-white/30 uppercase mb-1 block">Rotation (deg)</label>
+                                <span className="text-[9px] text-white/30 uppercase mb-1 block">Rotation (deg)</span>
                                 <div className="grid grid-cols-3 gap-1">
-                                    <NumberInput label="X" value={Math.round(THREE.MathUtils.radToDeg(rot.x))} onChange={(v) => updateTransform('rotation', 'x', v)} />
-                                    <NumberInput label="Y" value={Math.round(THREE.MathUtils.radToDeg(rot.y))} onChange={(v) => updateTransform('rotation', 'y', v)} />
-                                    <NumberInput label="Z" value={Math.round(THREE.MathUtils.radToDeg(rot.z))} onChange={(v) => updateTransform('rotation', 'z', v)} />
+                                    <NumberInput id={`rot-x-${model.id}`} label="X" value={Math.round(THREE.MathUtils.radToDeg(rot.x))} onChange={(v) => updateTransform('rotation', 'x', v)} />
+                                    <NumberInput id={`rot-y-${model.id}`} label="Y" value={Math.round(THREE.MathUtils.radToDeg(rot.y))} onChange={(v) => updateTransform('rotation', 'y', v)} />
+                                    <NumberInput id={`rot-z-${model.id}`} label="Z" value={Math.round(THREE.MathUtils.radToDeg(rot.z))} onChange={(v) => updateTransform('rotation', 'z', v)} />
                                 </div>
                             </div>
 
                             {/* Scale */}
                             <div>
-                                <label className="text-[9px] text-white/30 uppercase mb-1 block">Scale</label>
+                                <span className="text-[9px] text-white/30 uppercase mb-1 block">Scale</span>
                                 <div className="grid grid-cols-3 gap-1">
-                                    <NumberInput label="X" step={0.1} value={Math.round(scale.x * 100) / 100} onChange={(v) => updateTransform('scale', 'x', v)} />
-                                    <NumberInput label="Y" step={0.1} value={Math.round(scale.y * 100) / 100} onChange={(v) => updateTransform('scale', 'y', v)} />
-                                    <NumberInput label="Z" step={0.1} value={Math.round(scale.z * 100) / 100} onChange={(v) => updateTransform('scale', 'z', v)} />
+                                    <NumberInput id={`scale-x-${model.id}`} label="X" step={0.1} value={Math.round(scale.x * 100) / 100} onChange={(v) => updateTransform('scale', 'x', v)} />
+                                    <NumberInput id={`scale-y-${model.id}`} label="Y" step={0.1} value={Math.round(scale.y * 100) / 100} onChange={(v) => updateTransform('scale', 'y', v)} />
+                                    <NumberInput id={`scale-z-${model.id}`} label="Z" step={0.1} value={Math.round(scale.z * 100) / 100} onChange={(v) => updateTransform('scale', 'z', v)} />
                                 </div>
                             </div>
                         </div>
@@ -372,7 +375,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
                         <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
                         <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
-                        <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
+                        <input id="file-upload" name="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
                         </label>
                     </div>
 
@@ -412,8 +415,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         
                         <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
-                            <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
+                            <label htmlFor="res-width" className="text-[10px] text-white/40 block mb-1">Width (px)</label>
                             <input 
+                                id="res-width"
+                                name="res-width"
                                 type="number" 
                                 value={resW} 
                                 onChange={(e) => setResW(e.target.value)} 
@@ -421,8 +426,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             />
                             </div>
                             <div>
-                            <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
+                            <label htmlFor="res-height" className="text-[10px] text-white/40 block mb-1">Height (px)</label>
                             <input 
+                                id="res-height"
+                                name="res-height"
                                 type="number" 
                                 value={resH} 
                                 onChange={(e) => setResH(e.target.value)} 
@@ -432,8 +439,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         </div>
                         
                         <div className="mb-3">
-                            <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
+                            <label htmlFor="monitor-size" className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
                             <input 
+                            id="monitor-size"
+                            name="monitor-size"
                             type="number" 
                             value={monitorSize} 
                             onChange={(e) => setMonitorSize(e.target.value)} 
