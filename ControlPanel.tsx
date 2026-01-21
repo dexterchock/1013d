@@ -88,13 +88,12 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const isSelected = store.selectedModelId === model.id;
     const [isExpanded, setIsExpanded] = useState(false);
 
-    // Sync expansion with selection state, allowing for mount animation
+    // Sync expansion with selection state
     useEffect(() => {
         if (isSelected) {
-            const frame = requestAnimationFrame(() => {
-                setIsExpanded(true);
-            });
-            return () => cancelAnimationFrame(frame);
+            // Small timeout to allow state to settle before animating
+            const t = setTimeout(() => setIsExpanded(true), 10);
+            return () => clearTimeout(t);
         } else {
             setIsExpanded(false);
         }
@@ -120,7 +119,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const rot = store.modelRotations[model.id] || {x:0, y:0, z:0};
     const scale = store.modelScales[model.id] || {x:1, y:1, z:1};
     
-    // Hardcoded bezier for Tailwind to ensure it works
+    // Hardcoded bezier for smooth animation
     const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
     return (
@@ -148,6 +147,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                 </button>
             </div>
 
+            {/* Internal expansion container using CSS Grid for the list item itself */}
             <div 
                 className={`
                     grid transition-[grid-template-rows] duration-500 ${easingClass}
@@ -205,43 +205,43 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   const [mounted, setMounted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   
-  // Height Animation Logic using direct DOM manipulation for performance
-  const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  // -- HEIGHT MANAGEMENT SYSTEM --
+  // We use a separated structure:
+  // 1. measureRef: Wraps the actual content. It expands freely (no max-height).
+  // 2. measuredHeight state: Tracks the measureRef height.
+  // 3. sidebarHeight style: Applied to the container based on measuredHeight + headers.
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const measureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const content = contentRef.current;
-    const container = containerRef.current;
-    if (!content || !container) return;
+    if (!measureRef.current) return;
 
-    const updateHeight = () => {
-         if (!store.sidebarOpen) {
-             container.style.height = '56px'; // Collapsed height (h-10 header + p-2 padding = 40 + 16 = 56)
-             return;
-         }
-         
-         // Measure content height (scroll height to account for overflow)
-         const contentHeight = content.scrollHeight; 
-         // Add padding of LiquidContainer (p-4 = 32px)
-         const totalHeight = contentHeight + 32;
-         
-         // Cap the height to viewport
-         const maxH = window.innerHeight * 0.9;
-         
-         container.style.height = `${Math.min(totalHeight, maxH)}px`;
-    };
-
-    const ro = new ResizeObserver(() => {
-        requestAnimationFrame(updateHeight);
+    const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            // Use rAF to decouple from the loop and avoid "ResizeObserver loop limit exceeded"
+            requestAnimationFrame(() => {
+                setMeasuredHeight(entry.contentRect.height);
+            });
+        }
     });
-    
-    ro.observe(content);
-    
-    // Initial sync
-    updateHeight();
 
+    ro.observe(measureRef.current);
     return () => ro.disconnect();
-  }, [store.sidebarOpen, activeTab, store.models.length, showAbout]);
+  }, [activeTab, store.models.length, showAbout, store.selectedModelId]);
+
+  // Calculate the final height of the sidebar
+  // Header height (~40px) + Padding (~16px) = 56px base.
+  // Expanded Content adds to this.
+  const HEADER_HEIGHT = 40;
+  const PADDING_OFFSET = 32; // p-4 = 1rem top + 1rem bottom
+  const COLLAPSED_HEIGHT = 56; // Matching the visual collapsed state (Header + padding)
+
+  const targetHeight = store.sidebarOpen 
+    ? Math.min(measuredHeight + HEADER_HEIGHT + PADDING_OFFSET, window.innerHeight * 0.9)
+    : COLLAPSED_HEIGHT;
+  
+  // -- END HEIGHT MANAGEMENT --
+
 
   // Trigger entry animation
   useEffect(() => {
@@ -285,20 +285,26 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     <>
       <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden">
         
-        {/* LEFT SIDEBAR: Collapsible */}
+        {/* LEFT SIDEBAR: Outer Wrapper (Position & Width) */}
         <div 
-          ref={containerRef}
           className={`
             absolute left-4 top-4 
-            transition-[width,height,opacity,transform] duration-500 ${easingClass} pointer-events-auto flex flex-col overflow-hidden
+            transition-[width,transform,opacity] duration-500 ${easingClass} 
+            pointer-events-auto flex flex-col
             ${store.sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
             ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
           `}
-          // Explicit inline height handled by JS
         >
-          <LiquidContainer className={`h-full flex flex-col relative overflow-hidden transition-all duration-500 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
-            <div ref={contentRef} className="flex flex-col max-h-full">
-                {/* Header (Always Visible) */}
+          {/* Sizing Wrapper (Height Animation) */}
+          {/* This wrapper animates the height derived from measurement */}
+          <div 
+            className={`transition-[height] duration-500 ${easingClass} overflow-hidden rounded-2xl`}
+            style={{ height: `${targetHeight}px` }}
+          >
+             {/* Visual Container (Liquid Glass) - Fills the Sizing Wrapper */}
+             <LiquidContainer className={`h-full flex flex-col relative transition-all duration-500 ${store.sidebarOpen ? 'p-4' : 'p-2'}`}>
+                
+                {/* Header (Fixed Height) */}
                 <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-0.5 mb-0">
                     <div className="flex items-center gap-2">
                          <AnimatedLogo />
@@ -322,159 +328,164 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     </div>
                 </div>
 
-                {/* Collapsible Content */}
+                {/* Content Scroll Wrapper */}
+                {/* Critical: overflow-y-auto enables scrolling when height is capped */}
+                {/* Critical: h-full ensures it uses available space, but measureRef inside grows freely */}
                 <div 
-                className={`
-                    flex flex-col flex-1 transition-opacity duration-300
-                    ${store.sidebarOpen ? 'opacity-100 delay-150' : 'opacity-0 pointer-events-none'}
-                `}
+                    className={`
+                        flex-1 overflow-y-auto no-scrollbar -mr-2 pr-2
+                        transition-opacity duration-300
+                        ${store.sidebarOpen ? 'opacity-100 delay-150' : 'opacity-0 pointer-events-none'}
+                    `}
                 >
-                    {/* Spacer */}
-                    <div className="h-4 shrink-0" />
-                
-                    {/* About Section */}
-                    <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
-                        <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
-                            <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
-                            <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                <span>
-                                    Creator: <a 
-                                        href="https://www.instagram.com/dexterchock/" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer" 
-                                        className="hover:text-blue-400 transition-colors cursor-pointer border-b border-transparent hover:border-blue-400/30"
-                                    >
-                                        Dexter Chock
-                                    </a>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
-                        <button 
-                        onClick={() => setActiveTab('models')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'models' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
-                        >
-                        Models
-                        </button>
-                        <button 
-                        onClick={() => setActiveTab('calibration')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'calibration' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
-                        >
-                        Calibration
-                        </button>
-                    </div>
-
-                    {/* TAB CONTENT: MODELS */}
-                    {activeTab === 'models' && (
-                        <div className="flex flex-col animate-in fade-in duration-300">
-                        {/* Upload Area */}
-                        <div className="mb-4 shrink-0">
-                            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                            <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
-                            <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
-                            <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
-                            </label>
-                        </div>
-
-                        {/* Model List */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar mb-2 max-h-[50vh]">
-                            <h3 className="text-xs font-mono uppercase text-white/40 mb-2">Active Models</h3>
-                            <div className="space-y-2">
-                            {store.models.length === 0 && (
-                                <div className="flex flex-col items-center gap-2 p-2">
-                                    <div className="text-sm text-white/20 italic">No models loaded.</div>
-                                    <button 
-                                        onClick={() => store.addExampleModel()}
-                                        className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
-                                    >
-                                        Try Example
-                                    </button>
-                                </div>
-                            )}
-                            {store.models.map((model) => (
-                                <ModelListItem key={model.id} model={model} />
-                            ))}
-                            </div>
-                        </div>
-                        </div>
-                    )}
-
-                    {/* TAB CONTENT: CALIBRATION */}
-                    {activeTab === 'calibration' && (
-                        <div className="flex flex-col animate-in fade-in duration-300 pb-1">
-                            <p className="text-xs text-white/60 mb-4 leading-relaxed">
-                            For true 1:1 scale, the app needs to know your specific pixel density (PPI).
-                            </p>
-
-                            {/* Calculator Section */}
-                            <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
-                            <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Auto Calculate</h3>
-                            
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                <div>
-                                <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
-                                <input 
-                                    type="number" 
-                                    value={resW} 
-                                    onChange={(e) => setResW(e.target.value)} 
-                                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
-                                />
-                                </div>
-                                <div>
-                                <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
-                                <input 
-                                    type="number" 
-                                    value={resH} 
-                                    onChange={(e) => setResH(e.target.value)} 
-                                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
-                                />
+                    {/* Measurement Target */}
+                    {/* This div is NOT height-constrained, allowing ResizeObserver to read true content height */}
+                    <div ref={measureRef} className="flex flex-col min-h-0">
+                        
+                        <div className="h-4 shrink-0" /> {/* Spacer */}
+                        
+                        {/* About Section */}
+                        <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
+                            <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
+                                <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
+                                <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    <span>
+                                        Creator: <a 
+                                            href="https://www.instagram.com/dexterchock/" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            className="hover:text-blue-400 transition-colors cursor-pointer border-b border-transparent hover:border-blue-400/30"
+                                        >
+                                            Dexter Chock
+                                        </a>
+                                    </span>
                                 </div>
                             </div>
-                            
-                            <div className="mb-3">
-                                <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
-                                <input 
-                                type="number" 
-                                value={monitorSize} 
-                                onChange={(e) => setMonitorSize(e.target.value)} 
-                                placeholder="e.g. 24, 27, 13.3"
-                                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
-                                />
-                            </div>
+                        </div>
 
-                            <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">
-                                Calculate PPI
-                            </LiquidButton>
-                            </div>
-
-                            {/* Manual Controls - Replaced with Modal Trigger */}
-                            <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
-                            <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Manual Adjustment</h3>
-                            <p className="text-[10px] text-white/40 mb-3">
-                                Use a physical credit card to calibrate the scale precisely.
-                            </p>
-                            
-                            <div className="text-center mb-4">
-                                <span className="text-xl font-bold font-mono text-blue-400">{store.ppi.toFixed(1)}</span>
-                                <span className="text-[10px] text-white/40 ml-1">PPI</span>
-                            </div>
-
-                            <LiquidButton 
-                                onClick={() => store.setCalibrationModalOpen(true)}
-                                className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
+                        {/* Tabs */}
+                        <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
+                            <button 
+                            onClick={() => setActiveTab('models')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'models' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
                             >
-                                Open Manual Calibration
-                            </LiquidButton>
-                            </div>
+                            Models
+                            </button>
+                            <button 
+                            onClick={() => setActiveTab('calibration')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'calibration' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/80'}`}
+                            >
+                            Calibration
+                            </button>
                         </div>
-                    )}
+
+                        {/* TAB CONTENT: MODELS */}
+                        {activeTab === 'models' && (
+                            <div className="flex flex-col animate-in fade-in duration-300">
+                                <div className="mb-4 shrink-0">
+                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
+                                    <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
+                                    <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
+                                    <input type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
+                                    </label>
+                                </div>
+
+                                <div className="flex-1 mb-2">
+                                    <h3 className="text-xs font-mono uppercase text-white/40 mb-2">Active Models</h3>
+                                    <div className="space-y-2">
+                                    {store.models.length === 0 && (
+                                        <div className="flex flex-col items-center gap-2 p-2">
+                                            <div className="text-sm text-white/20 italic">No models loaded.</div>
+                                            <button 
+                                                onClick={() => store.addExampleModel()}
+                                                className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                                            >
+                                                Try Example
+                                            </button>
+                                        </div>
+                                    )}
+                                    {store.models.map((model) => (
+                                        <ModelListItem key={model.id} model={model} />
+                                    ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB CONTENT: CALIBRATION */}
+                        {activeTab === 'calibration' && (
+                            <div className="flex flex-col animate-in fade-in duration-300 pb-1">
+                                <p className="text-xs text-white/60 mb-4 leading-relaxed">
+                                For true 1:1 scale, the app needs to know your specific pixel density (PPI).
+                                </p>
+
+                                {/* Calculator Section */}
+                                <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
+                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Auto Calculate</h3>
+                                
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <div>
+                                    <label className="text-[10px] text-white/40 block mb-1">Width (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={resW} 
+                                        onChange={(e) => setResW(e.target.value)} 
+                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                    </div>
+                                    <div>
+                                    <label className="text-[10px] text-white/40 block mb-1">Height (px)</label>
+                                    <input 
+                                        type="number" 
+                                        value={resH} 
+                                        onChange={(e) => setResH(e.target.value)} 
+                                        className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                    </div>
+                                </div>
+                                
+                                <div className="mb-3">
+                                    <label className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
+                                    <input 
+                                    type="number" 
+                                    value={monitorSize} 
+                                    onChange={(e) => setMonitorSize(e.target.value)} 
+                                    placeholder="e.g. 24, 27, 13.3"
+                                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                    />
+                                </div>
+
+                                <LiquidButton onClick={calculatePPI} className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20">
+                                    Calculate PPI
+                                </LiquidButton>
+                                </div>
+
+                                <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
+                                <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">Manual Adjustment</h3>
+                                <p className="text-[10px] text-white/40 mb-3">
+                                    Use a physical credit card to calibrate the scale precisely.
+                                </p>
+                                
+                                <div className="text-center mb-4">
+                                    <span className="text-xl font-bold font-mono text-blue-400">{store.ppi.toFixed(1)}</span>
+                                    <span className="text-[10px] text-white/40 ml-1">PPI</span>
+                                </div>
+
+                                <LiquidButton 
+                                    onClick={() => store.setCalibrationModalOpen(true)}
+                                    className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
+                                >
+                                    Open Manual Calibration
+                                </LiquidButton>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
-          </LiquidContainer>
+
+             </LiquidContainer>
+          </div>
         </div>
 
         {/* BOTTOM CONTROL PILL */}
