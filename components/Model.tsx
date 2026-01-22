@@ -8,8 +8,8 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Augment JSX.IntrinsicElements to fix TypeScript errors if @react-three/fiber types are missing
-declare global {
+// Augment React's JSX namespace directly to fix R3F type errors
+declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
       primitive: any;

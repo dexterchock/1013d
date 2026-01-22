@@ -62,7 +62,7 @@ function App() {
 
   return (
     <div 
-        className="w-screen h-screen relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
+        className="w-screen h-[100dvh] relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

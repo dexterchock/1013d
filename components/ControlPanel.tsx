@@ -86,6 +86,60 @@ const NumberInput: React.FC<{
     );
 };
 
+// Robust input for calibration fields that handles focus/sync correctly to allow deletion
+const CalibrationInput: React.FC<{
+    value: number;
+    onChange: (val: number) => void;
+    id: string;
+    placeholder?: string;
+}> = ({ value, onChange, id, placeholder }) => {
+    const [localValue, setLocalValue] = useState(value.toString());
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // If element is focused, do not overwrite user input with store value
+        // This prevents the field from snapping back while typing or clearing
+        if (document.activeElement === inputRef.current) return;
+        setLocalValue(value.toString());
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLocalValue(val);
+        const num = parseFloat(val);
+        // We only update the store if it's a valid number. 
+        // If empty (NaN), store keeps old value, but local state shows empty to user.
+        if (!isNaN(num)) {
+            onChange(num);
+        }
+    };
+
+    const handleBlur = () => {
+        // On blur, if invalid (empty), revert to last known good store value
+        const num = parseFloat(localValue);
+        if (isNaN(num)) {
+             setLocalValue(value.toString());
+        } else {
+             // Optional: Format cleanly on blur
+             setLocalValue(num.toString());
+        }
+    };
+
+    return (
+        <input 
+            ref={inputRef}
+            id={id}
+            name={id}
+            type="number" 
+            value={localValue} 
+            onChange={handleChange} 
+            onBlur={handleBlur}
+            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/20"
+            placeholder={placeholder}
+        />
+    );
+};
+
 const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const store = useStore();
     const isSelected = store.selectedModelId === model.id;
@@ -272,15 +326,6 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Calibration State (Synced with Store)
   const { resolutionWidth, resolutionHeight, diagonalInches } = store.calibrationSettings;
 
-  const updateCalibration = (key: keyof typeof store.calibrationSettings, value: string) => {
-      const num = parseFloat(value);
-      // We allow the input to be empty string for typing, but only update store with valid numbers or keep old logic if needed.
-      // For simplicity, we can just update the store with whatever number we parse, or 0.
-      if (!isNaN(num)) {
-          store.setCalibrationSettings({ [key]: num });
-      }
-  };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       store.addModels(Array.from(e.target.files));
@@ -410,7 +455,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
                         <span className="text-sm text-white/50 group-hover:text-white">Drag & Drop or Click</span>
                         <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
-                        <input id="file-upload" name="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf" />
+                        <input id="file-upload" name="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" accept=".obj,.stl,.3mf,*/*" />
                         </label>
                     </div>
 
@@ -451,38 +496,29 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
                             <label htmlFor="res-width" className="text-[10px] text-white/40 block mb-1">Width (px)</label>
-                            <input 
-                                id="res-width"
-                                name="res-width"
-                                type="number" 
+                            <CalibrationInput 
+                                id="res-width" 
                                 value={resolutionWidth} 
-                                onChange={(e) => updateCalibration('resolutionWidth', e.target.value)} 
-                                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                onChange={(val) => store.setCalibrationSettings({ resolutionWidth: val })}
                             />
                             </div>
                             <div>
                             <label htmlFor="res-height" className="text-[10px] text-white/40 block mb-1">Height (px)</label>
-                            <input 
-                                id="res-height"
-                                name="res-height"
-                                type="number" 
+                            <CalibrationInput 
+                                id="res-height" 
                                 value={resolutionHeight} 
-                                onChange={(e) => updateCalibration('resolutionHeight', e.target.value)} 
-                                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                onChange={(val) => store.setCalibrationSettings({ resolutionHeight: val })}
                             />
                             </div>
                         </div>
                         
                         <div className="mb-3">
                             <label htmlFor="monitor-size" className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
-                            <input 
-                            id="monitor-size"
-                            name="monitor-size"
-                            type="number" 
-                            value={diagonalInches} 
-                            onChange={(e) => updateCalibration('diagonalInches', e.target.value)} 
-                            placeholder="e.g. 24, 27, 13.3"
-                            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white"
+                            <CalibrationInput 
+                                id="monitor-size" 
+                                value={diagonalInches} 
+                                onChange={(val) => store.setCalibrationSettings({ diagonalInches: val })}
+                                placeholder="e.g. 24, 27, 13.3"
                             />
                         </div>
 
@@ -520,7 +556,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         {/* BOTTOM CONTROL PILL */}
         <div 
           className={`
-             absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
+             absolute bottom-10 md:bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
              transition-all duration-700 ${easingClass} delay-100
              ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
