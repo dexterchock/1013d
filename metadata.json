@@ -1,5 +1,7 @@
+
 {
-  "name": "1013D v12",
-  "description": "A high-end, minimalist 3D viewer featuring 'Liquid Glass' UI aesthetics, true 1:1 physical scale calibration, and smooth camera transitions for engineering and design verification.",
+  "name": "1013D v14",
+  "description": "1013D is a free online STL, OBJ, and 3MF viewer featuring 'Liquid Glass' UI, true 1:1 real-world scale calibration, and precise measuring tools for 3D printing and engineering verification.",
   "requestFramePermissions": []
 }
+    

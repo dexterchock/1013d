@@ -4,8 +4,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>1013D</title>
     
+    <!-- SEO & AEO Strategy: File Extension Hijack & Precision utility -->
+    <title>1013D - Free Online STL, OBJ, 3MF Viewer | True 1:1 Scale</title>
+    <meta name="description" content="Open .STL, .OBJ, and .3MF files instantly in your browser. The only free online 3D viewer with true 1:1 real-world scale accuracy via PPI calibration. No login, OLED-ready." />
+    <meta name="keywords" content="free stl viewer, online 3d viewer, view 3mf files, open obj file, 1:1 scale 3d viewer, real size stl viewer, ppi calibration 3d, 3d printing viewer, precision 3d tools, measure stl on screen" />
+    
+    <!-- Social & Open Graph -->
+    <meta property="og:title" content="1013D - The 1:1 Scale 3D Viewer" />
+    <meta property="og:description" content="View STL, OBJ, and 3MF files at exact physical scale on your screen. Precision tools for engineering and 3D printing verification." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/apple-touch-icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="1013D | True 1:1 3D Viewer" />
+    <meta name="twitter:description" content="Stop guessing. View 3D models at real-world scale on any device." />
+
     <!-- Static Icons -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -13,6 +26,35 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#050505" />
     <meta name="apple-mobile-web-app-title" content="1013D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Structured Data (JSON-LD) for AEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "1013D",
+      "alternateName": "1013D Viewer",
+      "description": "A high-performance, client-side 3D viewer for .STL, .OBJ, and .3MF files. Features unique 1:1 scale calibration for physical size verification on any screen.",
+      "applicationCategory": "DesignApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires WebGL support",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Native support for .STL, .OBJ, .3MF",
+        "True 1:1 Real-World Scale Display",
+        "Manual PPI Calibration",
+        "Credit Card Calibration Tool",
+        "Local File Processing (Privacy)",
+        "Dark Mode Optimized Interface"
+      ]
+    }
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -108,6 +150,15 @@
         </filter>
       </defs>
     </svg>
+    <section style="display:none;">
+      <h2>How to view 3D models in 1:1 scale</h2>
+      <ol>
+        <li>Upload your .STL, .OBJ, or .3MF file.</li>
+        <li>Select "Calibrate" from the menu.</li>
+        <li>Type in your screen resolution and size for the PPI Calibration for precision, or use manual calibration by placing your Credit Card to the screen for a 1:1 match.</li>
+        <li>Click the 1:1 button at the bottom right. Your display now shows the model at real-world dimensions.</li>
+      </ol>
+    </section>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
