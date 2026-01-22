@@ -8,7 +8,9 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Fix R3F type errors
+// ------------------------------------------------------------------
+// FIX 1: Type Definitions to prevent R3F errors
+// ------------------------------------------------------------------
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -26,19 +28,21 @@ interface ModelWrapperProps {
   index: number;
 }
 
-// --- Internal Components ---
-
+// ------------------------------------------------------------------
+// INTERNAL COMPONENT: SceneProcessor
+// Handles materials and calculating dimensions ONE time.
+// ------------------------------------------------------------------
 const SceneProcessor: React.FC<{ 
     scene: THREE.Object3D | THREE.Group | THREE.Mesh; 
     modelId: string; 
     color: string;
     isNativeYUp: boolean;
 }> = React.memo(({ scene, modelId, color, isNativeYUp }) => {
-    // 1. Selector for the specific action to avoid re-renders
+    // FIX 2: Use a selector so this component doesn't re-render on unrelated store changes
     const updateModelDimensions = useStore((state) => state.updateModelDimensions);
     const processedRef = useRef(false);
 
-    // 2. Material Logic
+    // Effect 1: Appearance (Runs when color changes)
     useEffect(() => {
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
@@ -58,10 +62,10 @@ const SceneProcessor: React.FC<{
         });
     }, [scene, color]);
 
-    // 3. Dimension Logic (Run Once with Store Check)
+    // Effect 2: Geometry & Dimensions (Runs ONCE per model load)
     useEffect(() => {
-        // 🛑 SAFETY GATE: Check store directly. If dimensions exist, DO NOT update.
-        // This prevents the "Load -> Update -> Re-render -> Load" loop.
+        // FIX 3: Safety Check - If we already have dimensions, DO NOT run this again.
+        // This stops the "Load -> Update -> Re-render -> Load" loop.
         const currentDims = useStore.getState().modelDimensions?.[modelId];
         if (currentDims && processedRef.current) return;
 
@@ -77,12 +81,13 @@ const SceneProcessor: React.FC<{
         const center = new THREE.Vector3();
         box.getCenter(center);
 
+        // Center the model geometry
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
-        // Update store
+        // Report to store
         updateModelDimensions(modelId, size.x, size.y, size.z);
         processedRef.current = true;
 
@@ -91,13 +96,17 @@ const SceneProcessor: React.FC<{
     return <primitive object={scene} />;
 });
 
+// ------------------------------------------------------------------
+// INTERNAL COMPONENT: ProceduralCube
+// ------------------------------------------------------------------
 const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
   const updateModelDimensions = useStore((state) => state.updateModelDimensions);
   
   useEffect(() => {
-    // 🛑 SAFETY GATE for Cube
+    // Safety Check for Cube too
     const currentDims = useStore.getState().modelDimensions?.[modelId];
     if (currentDims) return;
+    
     updateModelDimensions(modelId, 20, 20, 20);
   }, [modelId, updateModelDimensions]);
 
@@ -122,8 +131,9 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
   );
 };
 
-// --- Loaders ---
-
+// ------------------------------------------------------------------
+// LOADERS
+// ------------------------------------------------------------------
 const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const obj = useLoader(OBJLoader, url);
   const scene = useMemo(() => obj.clone(), [obj]);
@@ -155,23 +165,27 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData
   );
 }, (prev, next) => prev.modelData.id === next.modelData.id && prev.modelData.color === next.modelData.color);
 
-// --- Main Wrapper ---
-
+// ------------------------------------------------------------------
+// MAIN WRAPPER
+// ------------------------------------------------------------------
 export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
+  // FIX 4: Use INDIVIDUAL SELECTORS.
+  // DO NOT use const { ... } = useStore() because it triggers re-renders on ANY store change.
   const gizmoMode = useStore(state => state.gizmoMode);
   const rotationSnap = useStore(state => state.rotationSnap);
   const selectedModelId = useStore(state => state.selectedModelId);
   const selectModel = useStore(state => state.selectModel);
   const updateModelTransform = useStore(state => state.updateModelTransform);
   
-  // Specific selectors
+  // Only listen to THIS model's position
   const position = useStore(state => state.modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
   const rotation = useStore(state => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
   const scale = useStore(state => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
 
   const [group, setGroup] = useState<THREE.Group | null>(null);
   
-  // 🛑 FIX: Use Ref for synchronous dragging state
+  // FIX 5: Synchronous Ref for Dragging
+  // This prevents the race condition where the store updates before React knows we are dragging.
   const draggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -184,7 +198,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
 
   const handleDragStart = useCallback(() => {
      draggingRef.current = true; // Sync update
-     setIsDragging(true);        // React update (visuals)
+     setIsDragging(true);        // React update
   }, []);
 
   const handleDragEnd = useCallback(() => {
@@ -193,8 +207,9 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
   }, []);
 
   const handleObjectChange = useCallback((e: any) => {
-     // 🛑 GUARD: If we are not EXPLICITLY dragging, ignore this event.
-     // This prevents the loop where "Store Update -> Re-render -> Gizmo Update -> Store Update" happens.
+     // FIX 6: The Guard
+     // If we are not explicitly dragging, IGNORE the event. 
+     // This stops the infinite update loop.
      if (!draggingRef.current || !group) return;
 
      updateModelTransform(modelData.id, {
@@ -221,7 +236,8 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
       )}
       <group 
         ref={setGroup}
-        // If dragging, detach props to let TransformControls drive.
+        // If dragging, we PASS UNDEFINED to let TransformControls drive the visuals directly.
+        // If not dragging, we lock it to the store value.
         position={isDragging ? undefined : [position.x, position.y, position.z]}
         rotation={isDragging ? undefined : [rotation.x, rotation.y, rotation.z]}
         scale={isDragging ? undefined : [scale.x, scale.y, scale.z]}
