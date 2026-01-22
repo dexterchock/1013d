@@ -1,10 +1,22 @@
-
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { CameraControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { ModelWrapper } from './Model';
+
+// Augment JSX.IntrinsicElements to fix TypeScript errors if @react-three/fiber types are missing
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      ambientLight: any;
+      directionalLight: any;
+      primitive: any;
+      spotLight: any;
+      rectAreaLight: any;
+    }
+  }
+}
 
 // Camera Controls Actions
 const ACTION = {

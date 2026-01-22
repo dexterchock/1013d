@@ -1,97 +1,18 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>1013D</title>
     
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Static Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#050505" />
     <meta name="apple-mobile-web-app-title" content="1013D">
-    <meta name="theme-color" content="#050505">
-
-    <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
-    <link id="apple-icon" rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
-
-    <script>
-      (function() {
-        // --- CONFIGURATION ---
-        // Center Adjustment: 
-        // y='600' pushes the text DOWN (fixed the "too high" issue).
-        // font-size='520' ensures it fits safely inside the rounded corners.
-        const svgString = `
-          <svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
-            <rect width='1024' height='1024' fill='#050505'/>
-            <text x='512' y='600' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='520'>
-              <tspan fill='#ffffff'>1</tspan><tspan fill='#3b82f6'>D</tspan>
-            </text>
-          </svg>`;
-        
-        const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
-        
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = 1024;
-          canvas.height = 1024;
-          const ctx = canvas.getContext('2d');
-          
-          // Draw Background (Solid #050505 to prevent black artifacts on iOS)
-          ctx.fillStyle = '#050505';
-          ctx.fillRect(0, 0, 1024, 1024);
-          ctx.drawImage(img, 0, 0);
-          
-          const pngUrl = canvas.toDataURL('image/png');
-
-          // --- 1. Fix Safari Tab/Bookmark Icon ---
-          // Safari ignores SVG favicons. We force-update the standard favicon to the PNG we just made.
-          const favicon = document.getElementById('favicon') || document.createElement('link');
-          favicon.rel = 'icon';
-          favicon.type = 'image/png';
-          favicon.href = pngUrl;
-          if (!favicon.parentNode) document.head.appendChild(favicon);
-
-          // --- 2. Update Apple Touch Icon (Home Screen) ---
-          const appleLink = document.getElementById('apple-icon') || document.createElement('link');
-          appleLink.rel = 'apple-touch-icon';
-          appleLink.href = pngUrl;
-          if (!appleLink.parentNode) document.head.appendChild(appleLink);
-
-          // --- 3. Dynamic Manifest (Android Home Screen) ---
-          const manifest = {
-            name: "1013D",
-            short_name: "1013D",
-            start_url: ".",
-            display: "standalone",
-            background_color: "#050505",
-            theme_color: "#050505",
-            orientation: "any",
-            icons: [
-              {
-                src: pngUrl,
-                sizes: "1024x1024",
-                type: "image/png",
-                purpose: "any maskable"
-              }
-            ]
-          };
-          
-          const stringManifest = JSON.stringify(manifest);
-          const blob = new Blob([stringManifest], {type: 'application/json'});
-          const manifestUrl = URL.createObjectURL(blob);
-          
-          let manifestLink = document.querySelector('link[rel="manifest"]');
-          if (!manifestLink) {
-              manifestLink = document.createElement('link');
-              manifestLink.rel = 'manifest';
-              document.head.appendChild(manifestLink);
-          }
-          manifestLink.href = manifestUrl;
-        };
-        img.src = svgDataUrl;
-      })();
-    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -128,12 +49,12 @@
         background-color: #050505;
         color: #ffffff;
         overflow: hidden;
+        /* Prevent browser gestures to allow custom touch zoom */
         touch-action: none;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        overscroll-behavior: none;
       }
       
       canvas {

@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
@@ -8,6 +7,19 @@ import { TransformControls, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
+
+// Augment JSX.IntrinsicElements to fix TypeScript errors if @react-three/fiber types are missing
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      primitive: any;
+      group: any;
+      mesh: any;
+      boxGeometry: any;
+      meshStandardMaterial: any;
+    }
+  }
+}
 
 interface ModelWrapperProps {
   modelData: LoadedModel;
