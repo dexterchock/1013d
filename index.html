@@ -28,10 +28,15 @@
         // We use a square SVG for generation because iOS applies its own rounded mask.
         // If we bake in rounded corners, iOS will mask the corners again, potentially showing black artifacts.
         // We also use a standard font stack to ensure text renders.
+        
+        // VISUAL ADJUSTMENT:
+        // y='545' (vs 512 center) is used to push the text down. 
+        // Sans-serif fonts typically have empty descender space which makes the "mathematical center" 
+        // appear higher than the "visual center" for uppercase/numeric text like "1D".
         const svgString = `
           <svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
             <rect width='1024' height='1024' fill='#050505'/>
-            <text x='512' y='512' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='560'>
+            <text x='512' y='545' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='560'>
               <tspan fill='#ffffff'>1</tspan><tspan fill='#3b82f6'>D</tspan>
             </text>
           </svg>`;
@@ -178,7 +183,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
@@ -191,6 +195,5 @@
         </filter>
       </defs>
     </svg>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>
