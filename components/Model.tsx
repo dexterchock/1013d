@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Augment React's JSX namespace directly to fix R3F type errors
+// Augment React's JSX namespace directly
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -26,30 +26,28 @@ interface ModelWrapperProps {
   index: number;
 }
 
-// Internal component to handle scene processing and bounds reporting
+// --- Internal Components ---
+
 const SceneProcessor: React.FC<{ 
     scene: THREE.Object3D | THREE.Group | THREE.Mesh; 
     modelId: string; 
     color: string;
     isNativeYUp: boolean;
-}> = ({ scene, modelId, color, isNativeYUp }) => {
-    const { updateModelDimensions } = useStore();
+}> = React.memo(({ scene, modelId, color, isNativeYUp }) => {
+    // ⚡️ FIX 1: Use a selector to avoid re-rendering when position changes
+    const updateModelDimensions = useStore((state) => state.updateModelDimensions);
     const processedRef = useRef(false);
 
-    // EFFECT 1: Handle Materials & Color (Runs when color changes)
+    // Effect for Visuals (Runs when color changes)
     useEffect(() => {
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
                 const mesh = child as THREE.Mesh;
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
-                
-                // Ensure normals exist for correct lighting
                 if (mesh.geometry && !mesh.geometry.attributes.normal) {
                     mesh.geometry.computeVertexNormals();
                 }
-
-                // Material Tuning
                 mesh.material = new THREE.MeshStandardMaterial({ 
                     color: color, 
                     roughness: 0.5, 
@@ -60,55 +58,47 @@ const SceneProcessor: React.FC<{
         });
     }, [scene, color]);
 
-    // EFFECT 2: Handle Geometry, Orientation & Store Reporting (Runs ONCE per model)
+    // Effect for Dimensions (Runs ONCE)
     useEffect(() => {
-        // Stop if we have already processed this model to prevent Infinite Loop
         if (processedRef.current) return;
 
-        // 1. Fix Orientation
         if (isNativeYUp) {
             scene.rotation.x = Math.PI / 2;
         }
 
-        // 2. Update Matrix
         scene.updateMatrixWorld(true);
 
-        // 3. Calculate Bounding Box
         const box = new THREE.Box3().setFromObject(scene);
         const size = new THREE.Vector3();
         box.getSize(size);
         const center = new THREE.Vector3();
         box.getCenter(center);
 
-        // 4. Center Internally (Geometry Center -> Local 0,0,0)
-        // Z-UP: Drop to floor
+        // Center the model
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
-        // 5. Report Dimensions to Store
+        // Update Store
         updateModelDimensions(modelId, size.x, size.y, size.z);
-
-        // Mark as processed
+        
+        // ⚡️ FIX 2: Gatekeeper to ensure this never loops
         processedRef.current = true;
 
     }, [scene, modelId, isNativeYUp, updateModelDimensions]);
 
     return <primitive object={scene} />;
-};
+});
 
 const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
-  const { updateModelDimensions } = useStore();
+  // ⚡️ FIX: Selector here too
+  const updateModelDimensions = useStore((state) => state.updateModelDimensions);
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    // Stop if we have already loaded to prevent Infinite Loop
     if (loadedRef.current) return;
-
-    // Report dimensions immediately: 20x20x20mm
     updateModelDimensions(modelId, 20, 20, 20);
-    
     loadedRef.current = true;
   }, [modelId, updateModelDimensions]);
 
@@ -124,25 +114,16 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
     <group position={[0, 0, 10]}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[20, 20, 20]} />
-        <meshStandardMaterial 
-          color={color} 
-          roughness={0.5} 
-          metalness={0.1}
-          envMapIntensity={1.0}
-        />
+        <meshStandardMaterial color={color} roughness={0.5} metalness={0.1} envMapIntensity={1.0} />
       </mesh>
-
-      {/* Z Face (Top) - Standard View */}
       <Text position={[0, 0, 10.05]} rotation={[0, 0, 0]} {...textProps}>Z</Text>
-      
-      {/* X Face (Right) - Corrected for Upright Z Orientation */}
       <Text position={[10.05, 0, 0]} rotation={[0, Math.PI / 2, Math.PI / 2]} {...textProps}>X</Text>
-      
-      {/* Y Face (Back) - Corrected for Upright Z Orientation and Mirroring */}
       <Text position={[0, 10.05, 0]} rotation={[Math.PI / 2, Math.PI, 0]} {...textProps}>Y</Text>
     </group>
   );
 };
+
+// --- Loaders ---
 
 const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const obj = useLoader(OBJLoader, url);
@@ -162,7 +143,8 @@ const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({ u
   return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
 };
 
-const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
+// Memoize InnerModel so it doesn't re-render when parent (ModelWrapper) moves
+const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData }) => {
   const extension = useMemo(() => modelData.file.name.split('.').pop()?.toLowerCase(), [modelData.file.name]);
 
   return (
@@ -173,31 +155,27 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
         {extension === '3mf' && <ThreeMFLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
      </group>
   );
-};
+}, (prev, next) => prev.modelData.id === next.modelData.id && prev.modelData.color === next.modelData.color);
 
 // --- Main Wrapper ---
 
 export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) => {
-  const { 
-    gizmoMode, 
-    rotationSnap, 
-    selectedModelId, 
-    selectModel, 
-    modelPositions, 
-    modelRotations, 
-    modelScales,
-    updateModelTransform 
-  } = useStore();
+  // ⚡️ FIX 3: Use specific selectors to prevent full re-renders on unrelated updates
+  const gizmoMode = useStore(state => state.gizmoMode);
+  const rotationSnap = useStore(state => state.rotationSnap);
+  const selectedModelId = useStore(state => state.selectedModelId);
+  const selectModel = useStore(state => state.selectModel);
+  const updateModelTransform = useStore(state => state.updateModelTransform);
   
+  // Only subscribe to THIS model's transform
+  const position = useStore(state => state.modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
+  const rotation = useStore(state => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
+  const scale = useStore(state => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
+
   const [group, setGroup] = useState<THREE.Group | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const isSelected = selectedModelId === modelData.id;
-  
-  // Read transform from store
-  const position = modelPositions[modelData.id] || { x: 0, y: 0, z: 0 };
-  const rotation = modelRotations[modelData.id] || { x: 0, y: 0, z: 0 };
-  const scale = modelScales[modelData.id] || { x: 1, y: 1, z: 1 };
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation(); 
@@ -228,8 +206,6 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
       )}
       <group 
         ref={setGroup}
-        // Decouple React state from scene graph while dragging to prevent circular updates
-        // When dragging, we pass 'undefined' to let the TransformControls drive the ThreeJS object directly
         position={isDragging ? undefined : [position.x, position.y, position.z]}
         rotation={isDragging ? undefined : [rotation.x, rotation.y, rotation.z]}
         scale={isDragging ? undefined : [scale.x, scale.y, scale.z]}
