@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { CameraControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
@@ -47,8 +47,7 @@ const SceneContent: React.FC<{
   const isGridVisible = useStore((state) => state.isGridVisible);
   const ppi = useStore((state) => state.ppi);
   const isCalibrationModalOpen = useStore((state) => state.isCalibrationModalOpen);
-  const set1to1Mode = useStore((state) => state.set1to1Mode);
-
+  
   // --- Dynamic Centroid Calculation ---
   // Calculates the center point of all loaded models to focus the spotlight
   const centroid = useMemo(() => {
@@ -79,21 +78,31 @@ const SceneContent: React.FC<{
     lightTarget.updateMatrixWorld();
   });
   
-  const check1to1Scale = () => {
-    if (useStore.getState().isCalibrationModalOpen) {
-        if (useStore.getState().is1to1Mode) set1to1Mode(false);
+  // Optimization: Cache PPM (Pixels Per Millimeter) calculation
+  const ppm = useMemo(() => ppi / 25.4, [ppi]);
+
+  // Optimization: Stabilize function reference to prevent re-creation on every render
+  const check1to1Scale = useCallback(() => {
+    // Access store state imperatively to avoid dependency thrashing
+    const state = useStore.getState();
+    
+    if (state.isCalibrationModalOpen) {
+        if (state.is1to1Mode) state.set1to1Mode(false);
         return;
     }
+    
     if (!controlsRef.current) return;
+    
     const controls = controlsRef.current;
-    const ppm = ppi / 25.4;
     const tolerance = 0.015; 
     let isMatch = false;
     
     if (controls.camera.type === 'PerspectiveCamera') {
         const cam = controls.camera as THREE.PerspectiveCamera;
         if (cam.fov) {
+            // Recalculating FOV math here is cheap, window.innerHeight is fast access
             const fovRad = THREE.MathUtils.degToRad(cam.fov);
+            // Use cached ppm
             const idealDist = (window.innerHeight / ppm) / (2 * Math.tan(fovRad / 2));
             if (idealDist > 0) isMatch = (Math.abs(controls.distance - idealDist) / idealDist) < tolerance;
         }
@@ -104,10 +113,12 @@ const SceneContent: React.FC<{
         }
     }
     
-    if (useStore.getState().is1to1Mode !== isMatch) set1to1Mode(isMatch);
-  };
+    // Only update store if value actually changes
+    if (state.is1to1Mode !== isMatch) state.set1to1Mode(isMatch);
+  }, [ppm]); // Only re-create if calibration (PPI) changes
 
-  useEffect(() => { check1to1Scale(); }, [ppi, isCalibrationModalOpen]);
+  // Trigger check when PPI or Modal state changes specifically
+  useEffect(() => { check1to1Scale(); }, [check1to1Scale, ppi, isCalibrationModalOpen]);
   
   return (
     <>

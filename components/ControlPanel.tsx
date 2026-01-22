@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
@@ -176,6 +175,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const pos = store.modelPositions[model.id] || {x:0, y:0, z:0};
     const rot = store.modelRotations[model.id] || {x:0, y:0, z:0};
     const scale = store.modelScales[model.id] || {x:1, y:1, z:1};
+    const dim = store.modelDimensions[model.id] || {x:0, y:0, z:0};
     
     // Hardcoded bezier for Tailwind to ensure it works
     const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
@@ -239,13 +239,37 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                                 </div>
                             </div>
 
-                            {/* Scale */}
+                            {/* Dimension (mm) - Replaces Scale */}
                             <div>
-                                <span className="text-[9px] text-white/30 uppercase mb-1 block">Scale</span>
+                                <span className="text-[9px] text-white/30 uppercase mb-1 block">Dimension (mm)</span>
                                 <div className="grid grid-cols-3 gap-1">
-                                    <NumberInput id={`scale-x-${model.id}`} label="X" step={0.1} value={Math.round(scale.x * 100) / 100} onChange={(v) => updateTransform('scale', 'x', v)} />
-                                    <NumberInput id={`scale-y-${model.id}`} label="Y" step={0.1} value={Math.round(scale.y * 100) / 100} onChange={(v) => updateTransform('scale', 'y', v)} />
-                                    <NumberInput id={`scale-z-${model.id}`} label="Z" step={0.1} value={Math.round(scale.z * 100) / 100} onChange={(v) => updateTransform('scale', 'z', v)} />
+                                    <NumberInput 
+                                        id={`dim-x-${model.id}`} 
+                                        label="X" 
+                                        step={1} 
+                                        value={Math.round(scale.x * dim.x * 100) / 100} 
+                                        onChange={(v) => {
+                                            if (dim.x > 0) updateTransform('scale', 'x', v / dim.x);
+                                        }} 
+                                    />
+                                    <NumberInput 
+                                        id={`dim-y-${model.id}`} 
+                                        label="Y" 
+                                        step={1} 
+                                        value={Math.round(scale.y * dim.y * 100) / 100} 
+                                        onChange={(v) => {
+                                            if (dim.y > 0) updateTransform('scale', 'y', v / dim.y);
+                                        }} 
+                                    />
+                                    <NumberInput 
+                                        id={`dim-z-${model.id}`} 
+                                        label="Z" 
+                                        step={1} 
+                                        value={Math.round(scale.z * dim.z * 100) / 100} 
+                                        onChange={(v) => {
+                                            if (dim.z > 0) updateTransform('scale', 'z', v / dim.z);
+                                        }} 
+                                    />
                                 </div>
                             </div>
                         </div>
