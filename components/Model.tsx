@@ -34,9 +34,10 @@ const SceneProcessor: React.FC<{
     isNativeYUp: boolean;
 }> = ({ scene, modelId, color, isNativeYUp }) => {
     const { updateModelDimensions } = useStore();
+    const processedRef = useRef(false);
 
+    // EFFECT 1: Handle Materials & Color (Runs when color changes)
     useEffect(() => {
-        // 1. Apply Color & Material
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
                 const mesh = child as THREE.Mesh;
@@ -48,8 +49,7 @@ const SceneProcessor: React.FC<{
                     mesh.geometry.computeVertexNormals();
                 }
 
-                // Material Tuning:
-                // Increased envMapIntensity to 1.0 to fix "black model" issues
+                // Material Tuning
                 mesh.material = new THREE.MeshStandardMaterial({ 
                     color: color, 
                     roughness: 0.5, 
@@ -58,43 +58,58 @@ const SceneProcessor: React.FC<{
                 });
             }
         });
+    }, [scene, color]);
 
-        // 2. Fix Orientation
+    // EFFECT 2: Handle Geometry, Orientation & Store Reporting (Runs ONCE per model)
+    useEffect(() => {
+        // Stop if we have already processed this model to prevent Infinite Loop
+        if (processedRef.current) return;
+
+        // 1. Fix Orientation
         if (isNativeYUp) {
             scene.rotation.x = Math.PI / 2;
         }
 
-        // 3. Update Matrix
+        // 2. Update Matrix
         scene.updateMatrixWorld(true);
 
-        // 4. Calculate Bounding Box
+        // 3. Calculate Bounding Box
         const box = new THREE.Box3().setFromObject(scene);
         const size = new THREE.Vector3();
         box.getSize(size);
         const center = new THREE.Vector3();
         box.getCenter(center);
 
-        // 5. Center Internally (Geometry Center -> Local 0,0,0)
+        // 4. Center Internally (Geometry Center -> Local 0,0,0)
         // Z-UP: Drop to floor
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
-        // 6. Report Dimensions to Store
+        // 5. Report Dimensions to Store
         updateModelDimensions(modelId, size.x, size.y, size.z);
 
-    }, [scene, color, isNativeYUp, modelId, updateModelDimensions]);
+        // Mark as processed
+        processedRef.current = true;
+
+    }, [scene, modelId, isNativeYUp, updateModelDimensions]);
 
     return <primitive object={scene} />;
 };
 
 const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
   const { updateModelDimensions } = useStore();
+  const loadedRef = useRef(false);
 
   useEffect(() => {
+    // Stop if we have already loaded to prevent Infinite Loop
+    if (loadedRef.current) return;
+
     // Report dimensions immediately: 20x20x20mm
     updateModelDimensions(modelId, 20, 20, 20);
+    
+    loadedRef.current = true;
   }, [modelId, updateModelDimensions]);
 
   const textProps = {
