@@ -101,8 +101,9 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
     color: "white",
     anchorX: "center" as const,
     anchorY: "middle" as const,
-    // FIX: Removed the 'font' property to use the default Roboto font.
-    // This fixes the "unsupported GSUB table" error.
+    // EXPLICIT FONT URL: Using a standard .woff file without complex tables (GSUB) 
+    // to prevent errors in the text parser.
+    font: 'https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff'
   };
 
   return (
@@ -138,6 +139,7 @@ const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, 
 const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const geom = useLoader(STLLoader, url);
   const mesh = useMemo(() => new THREE.Mesh(geom), [geom]);
+  // FIX: Passed 'mesh' instead of undefined 'scene' variable
   return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
 };
 
