@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,37 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>1013D</title>
     
-    <!-- PWA & Mobile Meta -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="1013D">
     <meta name="theme-color" content="#050505">
 
-    <!-- 
-      Static Icons:
-      iOS "Add to Home Screen" often ignores JavaScript-injected links and looks only at the raw HTML.
-      We provide a static Base64 PNG here as a fallback. 
-      (Black square 1x1 base64 used here as placeholder for valid structure - iOS will scale it or use it as is)
-    -->
-    <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23050505'/%3E%3Ctext x='50' y='50' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='55'%3E%3Ctspan fill='%23ffffff'%3E1%3C/tspan%3E%3Ctspan fill='%233b82f6'%3ED%3C/tspan%3E%3C/text%3E%3C/svg%3E" />
+    <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
+    <link id="apple-icon" rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88F/yPwAI8wM4y1ra1AAAAABJRU5ErkJggg==" />
 
-    <!-- Dynamic Icon Generator -->
     <script>
       (function() {
-        // We use a square SVG for generation because iOS applies its own rounded mask.
-        // If we bake in rounded corners, iOS will mask the corners again, potentially showing black artifacts.
-        // We also use a standard font stack to ensure text renders.
-        
-        // VISUAL ADJUSTMENT:
-        // y='545' (vs 512 center) is used to push the text down. 
-        // Sans-serif fonts typically have empty descender space which makes the "mathematical center" 
-        // appear higher than the "visual center" for uppercase/numeric text like "1D".
+        // --- CONFIGURATION ---
+        // Center Adjustment: 
+        // y='600' pushes the text DOWN (fixed the "too high" issue).
+        // font-size='520' ensures it fits safely inside the rounded corners.
         const svgString = `
           <svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
             <rect width='1024' height='1024' fill='#050505'/>
-            <text x='512' y='545' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='560'>
+            <text x='512' y='600' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='520'>
               <tspan fill='#ffffff'>1</tspan><tspan fill='#3b82f6'>D</tspan>
             </text>
           </svg>`;
@@ -50,26 +37,28 @@
           canvas.height = 1024;
           const ctx = canvas.getContext('2d');
           
-          // Double assurance of background color
+          // Draw Background (Solid #050505 to prevent black artifacts on iOS)
           ctx.fillStyle = '#050505';
           ctx.fillRect(0, 0, 1024, 1024);
-          
           ctx.drawImage(img, 0, 0);
           
           const pngUrl = canvas.toDataURL('image/png');
 
-          // 1. Update Apple Touch Icon (iOS Home Screen)
-          // Remove existing if any
-          const existingApple = document.querySelector('link[rel="apple-touch-icon"]');
-          if (existingApple) existingApple.remove();
-          
-          const appleLink = document.createElement('link');
+          // --- 1. Fix Safari Tab/Bookmark Icon ---
+          // Safari ignores SVG favicons. We force-update the standard favicon to the PNG we just made.
+          const favicon = document.getElementById('favicon') || document.createElement('link');
+          favicon.rel = 'icon';
+          favicon.type = 'image/png';
+          favicon.href = pngUrl;
+          if (!favicon.parentNode) document.head.appendChild(favicon);
+
+          // --- 2. Update Apple Touch Icon (Home Screen) ---
+          const appleLink = document.getElementById('apple-icon') || document.createElement('link');
           appleLink.rel = 'apple-touch-icon';
           appleLink.href = pngUrl;
-          document.head.appendChild(appleLink);
+          if (!appleLink.parentNode) document.head.appendChild(appleLink);
 
-          // 2. Dynamic Manifest (Android Home Screen)
-          // Using a PNG blob in the manifest ensures Android doesn't try to rasterize the SVG poorly.
+          // --- 3. Dynamic Manifest (Android Home Screen) ---
           const manifest = {
             name: "1013D",
             short_name: "1013D",
@@ -92,10 +81,13 @@
           const blob = new Blob([stringManifest], {type: 'application/json'});
           const manifestUrl = URL.createObjectURL(blob);
           
-          const manifestLink = document.createElement('link');
-          manifestLink.rel = 'manifest';
+          let manifestLink = document.querySelector('link[rel="manifest"]');
+          if (!manifestLink) {
+              manifestLink = document.createElement('link');
+              manifestLink.rel = 'manifest';
+              document.head.appendChild(manifestLink);
+          }
           manifestLink.href = manifestUrl;
-          document.head.appendChild(manifestLink);
         };
         img.src = svgDataUrl;
       })();
@@ -136,7 +128,6 @@
         background-color: #050505;
         color: #ffffff;
         overflow: hidden;
-        /* Prevent browser gestures to allow custom touch zoom */
         touch-action: none;
         -webkit-user-select: none;
         -moz-user-select: none;
