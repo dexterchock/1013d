@@ -231,7 +231,7 @@ export const ViewerScene: React.FC<{
             antialias: true, 
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2, // Slightly increased exposure
-            logarithmicDepthBuffer: true
+            logarithmicDepthBuffer: false
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
