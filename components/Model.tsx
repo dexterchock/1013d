@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
@@ -8,7 +8,9 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Fix R3F type errors
+// ------------------------------------------------------------------
+// TYPE FIXES
+// ------------------------------------------------------------------
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -27,7 +29,8 @@ interface ModelWrapperProps {
 }
 
 // ------------------------------------------------------------------
-// INTERNAL COMPONENT: SceneProcessor
+// SCENE PROCESSOR (Geometry & Materials)
+// Optimized to run ONCE and never look back.
 // ------------------------------------------------------------------
 const SceneProcessor: React.FC<{ 
     scene: THREE.Object3D | THREE.Group | THREE.Mesh; 
@@ -35,9 +38,11 @@ const SceneProcessor: React.FC<{
     color: string;
     isNativeYUp: boolean;
 }> = React.memo(({ scene, modelId, color, isNativeYUp }) => {
-    const updateModelDimensions = useStore((state) => state.updateModelDimensions);
+    // ⚡️ PERFORMANCE: We do NOT hook into the store here. 
+    // We access the setter via a closure or getState to prevent re-renders.
     const processedRef = useRef(false);
 
+    // 1. Material Application
     useEffect(() => {
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
@@ -57,46 +62,48 @@ const SceneProcessor: React.FC<{
         });
     }, [scene, color]);
 
-    // Safety Gate: Prevent Infinite Load Loop
+    // 2. Geometry & Dimension Calculation
     useEffect(() => {
-        const currentDims = useStore.getState().modelDimensions?.[modelId];
-        if (currentDims && processedRef.current) return;
+        // ⚡️ CHECK: Direct store access to prevent loop
+        const state = useStore.getState();
+        if (state.modelDimensions?.[modelId] && processedRef.current) return;
 
         if (isNativeYUp) {
             scene.rotation.x = Math.PI / 2;
         }
 
         scene.updateMatrixWorld(true);
-
         const box = new THREE.Box3().setFromObject(scene);
         const size = new THREE.Vector3();
         box.getSize(size);
         const center = new THREE.Vector3();
         box.getCenter(center);
 
+        // Centering
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
-        updateModelDimensions(modelId, size.x, size.y, size.z);
+        // ⚡️ UPDATE: Call setter directly
+        state.updateModelDimensions(modelId, size.x, size.y, size.z);
         processedRef.current = true;
-    }, [scene, modelId, isNativeYUp, updateModelDimensions]);
+
+    }, [scene, modelId, isNativeYUp]); // Minimized dependencies
 
     return <primitive object={scene} />;
 });
 
 // ------------------------------------------------------------------
-// INTERNAL COMPONENT: ProceduralCube
+// PROCEDURAL CUBE
 // ------------------------------------------------------------------
 const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
-  const updateModelDimensions = useStore((state) => state.updateModelDimensions);
-  
   useEffect(() => {
-    const currentDims = useStore.getState().modelDimensions?.[modelId];
-    if (currentDims) return;
-    updateModelDimensions(modelId, 20, 20, 20);
-  }, [modelId, updateModelDimensions]);
+    const state = useStore.getState();
+    if (!state.modelDimensions?.[modelId]) {
+       state.updateModelDimensions(modelId, 20, 20, 20);
+    }
+  }, [modelId]);
 
   const textProps = {
     fontSize: 10,
@@ -120,29 +127,29 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
 };
 
 // ------------------------------------------------------------------
-// LOADERS
+// LOADERS (Pure Components)
 // ------------------------------------------------------------------
-const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
+const ObjLoaded = React.memo(({ url, color, id }: { url: string; color: string; id: string }) => {
   const obj = useLoader(OBJLoader, url);
   const scene = useMemo(() => obj.clone(), [obj]);
   return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
-};
+});
 
-const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
+const StlLoaded = React.memo(({ url, color, id }: { url: string; color: string; id: string }) => {
   const geom = useLoader(STLLoader, url);
   const mesh = useMemo(() => new THREE.Mesh(geom), [geom]);
   return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
-};
+});
 
-const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
+const ThreeMFLoaded = React.memo(({ url, color, id }: { url: string; color: string; id: string }) => {
   const object = useLoader(ThreeMFLoader, url);
   const scene = useMemo(() => object.clone(), [object]);
   return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
-};
+});
 
-const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData }) => {
+const InnerModel = React.memo(({ modelData }: { modelData: LoadedModel }) => {
   const extension = useMemo(() => modelData.file.name.split('.').pop()?.toLowerCase(), [modelData.file.name]);
-
+  
   return (
      <group>
         {extension === 'cube' && <ProceduralCube modelId={modelData.id} color={modelData.color} />}
@@ -154,85 +161,84 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData
 }, (prev, next) => prev.modelData.id === next.modelData.id && prev.modelData.color === next.modelData.color);
 
 // ------------------------------------------------------------------
-// MAIN WRAPPER (CRASH FIX HERE)
+// MAIN WRAPPER (THE FIX)
 // ------------------------------------------------------------------
 export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
-  // 1. Stable Action Selectors (These never cause re-renders)
+  // ⚡️ 1. GLOBAL STATE: Only listen to "Mode" changes, NOT position changes.
   const gizmoMode = useStore(state => state.gizmoMode);
   const rotationSnap = useStore(state => state.rotationSnap);
   const selectedModelId = useStore(state => state.selectedModelId);
   const selectModel = useStore(state => state.selectModel);
-  const updateModelTransform = useStore(state => state.updateModelTransform);
-  
-  // 2. Initial State ONLY. We DO NOT subscribe to these hooks for updates.
+
+  // ⚡️ 2. DIRECT ACCESS: We do not bind position/rotation/scale to React state.
   // This prevents the component from re-rendering when the model moves.
-  const [initialPos] = useState(() => useStore.getState().modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
-  const [initialRot] = useState(() => useStore.getState().modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
-  const [initialScale] = useState(() => useStore.getState().modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
-
-  const [group, setGroup] = useState<THREE.Group | null>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const draggingRef = useRef(false);
-  const groupRef = useRef<THREE.Group | null>(null);
+  const [isSelected, setIsSelected] = useState(false);
 
-  const isSelected = selectedModelId === modelData.id;
-
-  // 3. Manual Subscription (Transient Updates)
-  // This updates the 3D object directly without waking up React
+  // Sync selection state locally to avoid full re-renders
   useEffect(() => {
-      // Connect to the store
-      const unsub = useStore.subscribe((state) => {
-          // 🛑 CRITICAL: If we are dragging, IGNORE the store update.
-          // This breaks the infinite loop.
-          if (draggingRef.current || !groupRef.current) return;
+    setIsSelected(selectedModelId === modelData.id);
+  }, [selectedModelId, modelData.id]);
 
-          const newPos = state.modelPositions[modelData.id];
-          const newRot = state.modelRotations[modelData.id];
-          const newScale = state.modelScales[modelData.id];
+  // ⚡️ 3. MANUAL SUBSCRIPTION: Bridge Zustand -> ThreeJS directly
+  useEffect(() => {
+    // Initial Load
+    const state = useStore.getState();
+    const initPos = state.modelPositions[modelData.id];
+    const initRot = state.modelRotations[modelData.id];
+    const initScale = state.modelScales[modelData.id];
 
-          // Mutate the object directly
-          if (newPos) groupRef.current.position.set(newPos.x, newPos.y, newPos.z);
-          if (newRot) groupRef.current.rotation.set(newRot.x, newRot.y, newRot.z);
-          if (newScale) groupRef.current.scale.set(newScale.x, newScale.y, newScale.z);
-      });
-      return () => unsub();
-  }, [modelData.id]);
+    if (groupRef.current) {
+        if(initPos) groupRef.current.position.set(initPos.x, initPos.y, initPos.z);
+        if(initRot) groupRef.current.rotation.set(initRot.x, initRot.y, initRot.z);
+        if(initScale) groupRef.current.scale.set(initScale.x, initScale.y, initScale.z);
+    }
 
-  // Capture the ref safely
-  const handleGroupRef = useCallback((node: THREE.Group) => {
-      setGroup(node);
-      groupRef.current = node;
-  }, []);
+    // Subscribe to changes
+    const unsubscribe = useStore.subscribe((state) => {
+        // If WE are dragging, ignore updates (prevents fighting/loops)
+        if (draggingRef.current || !groupRef.current) return;
+        
+        // Check if OUR data changed
+        const newPos = state.modelPositions[modelData.id];
+        const newRot = state.modelRotations[modelData.id];
+        const newScale = state.modelScales[modelData.id];
+
+        if (newPos) groupRef.current.position.set(newPos.x, newPos.y, newPos.z);
+        if (newRot) groupRef.current.rotation.set(newRot.x, newRot.y, newRot.z);
+        if (newScale) groupRef.current.scale.set(newScale.x, newScale.y, newScale.z);
+    });
+
+    return () => unsubscribe();
+  }, [modelData.id]); // Run only on mount
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation(); 
     selectModel(modelData.id);
   };
 
-  const handleDragStart = useCallback(() => {
-     draggingRef.current = true; 
-  }, []);
+  const handleDragStart = () => { draggingRef.current = true; };
+  const handleDragEnd = () => { draggingRef.current = false; };
 
-  const handleDragEnd = useCallback(() => {
-     draggingRef.current = false;
-  }, []);
-
-  const handleObjectChange = useCallback((e: any) => {
-     // Only update store if we are actually dragging
-     if (!draggingRef.current || !groupRef.current) return;
-
-     const g = groupRef.current;
-     updateModelTransform(modelData.id, {
-         position: { x: g.position.x, y: g.position.y, z: g.position.z },
-         rotation: { x: g.rotation.x, y: g.rotation.y, z: g.rotation.z },
-         scale: { x: g.scale.x, y: g.scale.y, z: g.scale.z }
+  const handleObjectChange = (e: any) => {
+     if (!groupRef.current) return;
+     const group = groupRef.current;
+     
+     // Throttle or direct update to store
+     // We use getState() to access the action without hooking
+     useStore.getState().updateModelTransform(modelData.id, {
+         position: { x: group.position.x, y: group.position.y, z: group.position.z },
+         rotation: { x: group.rotation.x, y: group.rotation.y, z: group.rotation.z },
+         scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z }
      });
-  }, [modelData.id, updateModelTransform]);
+  };
 
   return (
     <>
-      {isSelected && group && (
+      {isSelected && groupRef.current && (
         <TransformControls 
-          object={group} 
+          object={groupRef.current} 
           mode={gizmoMode} 
           enabled={true}
           rotationSnap={rotationSnap} 
@@ -244,15 +250,14 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
         />
       )}
       <group 
-        ref={handleGroupRef}
-        // Set initial values, but DO NOT update these props on re-renders.
-        // The useEffect above handles all updates manually.
-        position={[initialPos.x, initialPos.y, initialPos.z]}
-        rotation={[initialRot.x, initialRot.y, initialRot.z]}
-        scale={[initialScale.x, initialScale.y, initialScale.z]}
+        ref={groupRef}
         onClick={handleClick}
         onPointerMissed={() => {}}
       >
+         {/* NOTE: We do NOT pass position/rotation/scale props here.
+             They are handled by the Subscription Effect above. 
+             This keeps React rendering completely separate from Scene Graph updates.
+         */}
          <InnerModel modelData={modelData} />
       </group>
     </>
