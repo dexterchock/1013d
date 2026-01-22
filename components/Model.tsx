@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
@@ -175,6 +175,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
   } = useStore();
   
   const [group, setGroup] = useState<THREE.Group | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const isSelected = selectedModelId === modelData.id;
   
@@ -198,6 +199,8 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
           rotationSnap={rotationSnap} 
           size={0.8}
           space="local"
+          onMouseDown={() => setIsDragging(true)}
+          onMouseUp={() => setIsDragging(false)}
           onObjectChange={(e) => {
              if (!group) return;
              updateModelTransform(modelData.id, {
@@ -210,9 +213,11 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
       )}
       <group 
         ref={setGroup}
-        position={[position.x, position.y, position.z]}
-        rotation={[rotation.x, rotation.y, rotation.z]}
-        scale={[scale.x, scale.y, scale.z]}
+        // Decouple React state from scene graph while dragging to prevent circular updates
+        // When dragging, we pass 'undefined' to let the TransformControls drive the ThreeJS object directly
+        position={isDragging ? undefined : [position.x, position.y, position.z]}
+        rotation={isDragging ? undefined : [rotation.x, rotation.y, rotation.z]}
+        scale={isDragging ? undefined : [scale.x, scale.y, scale.z]}
         onClick={handleClick}
         onPointerMissed={() => {}}
       >
