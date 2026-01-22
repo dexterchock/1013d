@@ -26,6 +26,7 @@ interface ModelWrapperProps {
   index: number;
 }
 
+// Internal component to handle scene processing and bounds reporting
 const SceneProcessor: React.FC<{ 
     scene: THREE.Object3D | THREE.Group | THREE.Mesh; 
     modelId: string; 
@@ -35,16 +36,20 @@ const SceneProcessor: React.FC<{
     const { updateModelDimensions } = useStore();
 
     useEffect(() => {
+        // 1. Apply Color & Material
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
                 const mesh = child as THREE.Mesh;
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 
+                // Ensure normals exist for correct lighting
                 if (mesh.geometry && !mesh.geometry.attributes.normal) {
                     mesh.geometry.computeVertexNormals();
                 }
 
+                // Material Tuning:
+                // Increased envMapIntensity to 1.0 to fix "black model" issues
                 mesh.material = new THREE.MeshStandardMaterial({ 
                     color: color, 
                     roughness: 0.5, 
@@ -54,23 +59,29 @@ const SceneProcessor: React.FC<{
             }
         });
 
+        // 2. Fix Orientation
         if (isNativeYUp) {
             scene.rotation.x = Math.PI / 2;
         }
 
+        // 3. Update Matrix
         scene.updateMatrixWorld(true);
 
+        // 4. Calculate Bounding Box
         const box = new THREE.Box3().setFromObject(scene);
         const size = new THREE.Vector3();
         box.getSize(size);
         const center = new THREE.Vector3();
         box.getCenter(center);
 
+        // 5. Center Internally (Geometry Center -> Local 0,0,0)
+        // Z-UP: Drop to floor
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
+        // 6. Report Dimensions to Store
         updateModelDimensions(modelId, size.x, size.y, size.z);
 
     }, [scene, color, isNativeYUp, modelId, updateModelDimensions]);
@@ -82,6 +93,7 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
   const { updateModelDimensions } = useStore();
 
   useEffect(() => {
+    // Report dimensions immediately: 20x20x20mm
     updateModelDimensions(modelId, 20, 20, 20);
   }, [modelId, updateModelDimensions]);
 
@@ -101,11 +113,17 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
           color={color} 
           roughness={0.5} 
           metalness={0.1}
-          envMapIntensity: 1.0
+          envMapIntensity={1.0}
         />
       </mesh>
+
+      {/* Z Face (Top) - Standard View */}
       <Text position={[0, 0, 10.05]} rotation={[0, 0, 0]} {...textProps}>Z</Text>
+      
+      {/* X Face (Right) - Corrected for Upright Z Orientation */}
       <Text position={[10.05, 0, 0]} rotation={[0, Math.PI / 2, Math.PI / 2]} {...textProps}>X</Text>
+      
+      {/* Y Face (Back) - Corrected for Upright Z Orientation and Mirroring */}
       <Text position={[0, 10.05, 0]} rotation={[Math.PI / 2, Math.PI, 0]} {...textProps}>Y</Text>
     </group>
   );
@@ -142,6 +160,8 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
   );
 };
 
+// --- Main Wrapper ---
+
 export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) => {
   const { 
     gizmoMode, 
@@ -158,6 +178,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
 
   const isSelected = selectedModelId === modelData.id;
   
+  // Read transform from store
   const position = modelPositions[modelData.id] || { x: 0, y: 0, z: 0 };
   const rotation = modelRotations[modelData.id] || { x: 0, y: 0, z: 0 };
   const scale = modelScales[modelData.id] || { x: 1, y: 1, z: 1 };
@@ -177,8 +198,6 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
           rotationSnap={rotationSnap} 
           size={0.8}
           space="local"
-          // We use onMouseUp to commit changes once the interaction ends.
-          // This prevents the infinite update loop caused by onObjectChange.
           onMouseUp={() => {
              if (!group) return;
              updateModelTransform(modelData.id, {
@@ -195,6 +214,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
         rotation={[rotation.x, rotation.y, rotation.z]}
         scale={[scale.x, scale.y, scale.z]}
         onClick={handleClick}
+        onPointerMissed={() => {}}
       >
          <InnerModel modelData={modelData} />
       </group>
