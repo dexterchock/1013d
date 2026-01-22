@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Augment React's JSX namespace directly
+// Augment React's JSX namespace
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -34,11 +34,10 @@ const SceneProcessor: React.FC<{
     color: string;
     isNativeYUp: boolean;
 }> = React.memo(({ scene, modelId, color, isNativeYUp }) => {
-    // ⚡️ FIX 1: Use a selector to avoid re-rendering when position changes
     const updateModelDimensions = useStore((state) => state.updateModelDimensions);
     const processedRef = useRef(false);
 
-    // Effect for Visuals (Runs when color changes)
+    // 1. Material Effect (Runs on Color Change)
     useEffect(() => {
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
@@ -58,9 +57,12 @@ const SceneProcessor: React.FC<{
         });
     }, [scene, color]);
 
-    // Effect for Dimensions (Runs ONCE)
+    // 2. Dimension Logic (Runs ONCE)
     useEffect(() => {
-        if (processedRef.current) return;
+        // 🛑 HARD STOP: Check store directly to see if we already have dimensions.
+        // This prevents the loop even if the component unmounts/remounts.
+        const currentDims = useStore.getState().modelDimensions?.[modelId];
+        if (currentDims && processedRef.current) return;
 
         if (isNativeYUp) {
             scene.rotation.x = Math.PI / 2;
@@ -74,16 +76,13 @@ const SceneProcessor: React.FC<{
         const center = new THREE.Vector3();
         box.getCenter(center);
 
-        // Center the model
         const bottomZ = box.min.z;
         scene.position.x = -center.x;
         scene.position.y = -center.y;
         scene.position.z = -bottomZ; 
 
-        // Update Store
+        // Update store only if necessary
         updateModelDimensions(modelId, size.x, size.y, size.z);
-        
-        // ⚡️ FIX 2: Gatekeeper to ensure this never loops
         processedRef.current = true;
 
     }, [scene, modelId, isNativeYUp, updateModelDimensions]);
@@ -92,14 +91,14 @@ const SceneProcessor: React.FC<{
 });
 
 const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
-  // ⚡️ FIX: Selector here too
   const updateModelDimensions = useStore((state) => state.updateModelDimensions);
-  const loadedRef = useRef(false);
-
+  
   useEffect(() => {
-    if (loadedRef.current) return;
+    // 🛑 HARD STOP for Cube as well
+    const currentDims = useStore.getState().modelDimensions?.[modelId];
+    if (currentDims) return;
+
     updateModelDimensions(modelId, 20, 20, 20);
-    loadedRef.current = true;
   }, [modelId, updateModelDimensions]);
 
   const textProps = {
@@ -123,7 +122,7 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
   );
 };
 
-// --- Loaders ---
+// --- Loaders (Memoized) ---
 
 const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const obj = useLoader(OBJLoader, url);
@@ -143,7 +142,7 @@ const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({ u
   return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
 };
 
-// Memoize InnerModel so it doesn't re-render when parent (ModelWrapper) moves
+// Memoize InnerModel to prevent re-parsing geometry on position changes
 const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData }) => {
   const extension = useMemo(() => modelData.file.name.split('.').pop()?.toLowerCase(), [modelData.file.name]);
 
@@ -159,20 +158,23 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = React.memo(({ modelData
 
 // --- Main Wrapper ---
 
-export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) => {
-  // ⚡️ FIX 3: Use specific selectors to prevent full re-renders on unrelated updates
+export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
+  // Use Specific Selectors
   const gizmoMode = useStore(state => state.gizmoMode);
   const rotationSnap = useStore(state => state.rotationSnap);
   const selectedModelId = useStore(state => state.selectedModelId);
   const selectModel = useStore(state => state.selectModel);
   const updateModelTransform = useStore(state => state.updateModelTransform);
   
-  // Only subscribe to THIS model's transform
+  // Transform Selectors
   const position = useStore(state => state.modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
   const rotation = useStore(state => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
   const scale = useStore(state => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
 
   const [group, setGroup] = useState<THREE.Group | null>(null);
+  
+  // 🛑 The Fix: Use a ref to track dragging state synchronously
+  const draggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const isSelected = selectedModelId === modelData.id;
@@ -181,6 +183,28 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     e.stopPropagation(); 
     selectModel(modelData.id);
   };
+
+  const handleDragStart = useCallback(() => {
+     draggingRef.current = true;
+     setIsDragging(true);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+     draggingRef.current = false;
+     setIsDragging(false);
+  }, []);
+
+  const handleObjectChange = useCallback(() => {
+     // 🛑 GUARD: Only update store if WE are dragging. 
+     // This prevents the loop where React update -> Controls Change -> React Update
+     if (!draggingRef.current || !group) return;
+
+     updateModelTransform(modelData.id, {
+         position: { x: group.position.x, y: group.position.y, z: group.position.z },
+         rotation: { x: group.rotation.x, y: group.rotation.y, z: group.rotation.z },
+         scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z }
+     });
+  }, [group, modelData.id, updateModelTransform]);
 
   return (
     <>
@@ -192,20 +216,15 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
           rotationSnap={rotationSnap} 
           size={0.8}
           space="local"
-          onMouseDown={() => setIsDragging(true)}
-          onMouseUp={() => setIsDragging(false)}
-          onObjectChange={(e) => {
-             if (!group) return;
-             updateModelTransform(modelData.id, {
-                 position: { x: group.position.x, y: group.position.y, z: group.position.z },
-                 rotation: { x: group.rotation.x, y: group.rotation.y, z: group.rotation.z },
-                 scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z }
-             });
-          }}
+          onMouseDown={handleDragStart}
+          onMouseUp={handleDragEnd}
+          onObjectChange={handleObjectChange}
         />
       )}
       <group 
         ref={setGroup}
+        // If dragging, we detach these props (pass undefined) so TransformControls takes over full control
+        // If NOT dragging, we pass the store values so it snaps to the inputs
         position={isDragging ? undefined : [position.x, position.y, position.z]}
         rotation={isDragging ? undefined : [rotation.x, rotation.y, rotation.z]}
         scale={isDragging ? undefined : [scale.x, scale.y, scale.z]}
