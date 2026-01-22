@@ -48,8 +48,7 @@ const SceneProcessor: React.FC<{
                     mesh.geometry.computeVertexNormals();
                 }
 
-                // Material Tuning:
-                // Increased envMapIntensity to 1.0 to fix "black model" issues
+                // Material Tuning
                 mesh.material = new THREE.MeshStandardMaterial({ 
                     color: color, 
                     roughness: 0.5, 
@@ -102,7 +101,8 @@ const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId,
     color: "white",
     anchorX: "center" as const,
     anchorY: "middle" as const,
-    font: "https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff"
+    // FIX: Removed the 'font' property to use the default Roboto font.
+    // This fixes the "unsupported GSUB table" error.
   };
 
   return (
@@ -198,6 +198,9 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
           rotationSnap={rotationSnap} 
           size={0.8}
           space="local"
+          // FIX: Changed from onObjectChange to onMouseUp.
+          // This prevents the "infinite loop" error by only updating
+          // the global store when the drag action is complete.
           onMouseUp={() => {
              if (!group) return;
              updateModelTransform(modelData.id, {
