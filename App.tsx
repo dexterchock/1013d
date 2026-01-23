@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { ViewerScene } from './components/ViewerScene';
 import { Overlay } from './components/ControlPanel';
@@ -38,9 +37,15 @@ function App() {
     };
   }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Strictly handle preventDefault to allow drop, but avoid state updates here 
+    // as this event fires continuously on every mouse movement.
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -63,6 +68,7 @@ function App() {
   return (
     <div 
         className="w-screen h-[100dvh] relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -97,8 +103,14 @@ function App() {
       <AuraEffect />
       
       {/* Aesthetic Noise Overlay */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
-           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} 
+      <div 
+        className="absolute inset-0 opacity-40 pointer-events-none mix-blend-overlay"
+        style={{ 
+            backgroundImage: "url('/noise.png')",
+            backgroundRepeat: 'repeat',
+            backgroundSize: '100px 100px',
+            imageRendering: 'pixelated'
+        }} 
       />
 
       {/* 

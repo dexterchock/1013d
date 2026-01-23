@@ -165,25 +165,20 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
 // --- Main Wrapper ---
 
 export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) => {
-  const { 
-    gizmoMode, 
-    rotationSnap, 
-    selectedModelId, 
-    selectModel, 
-    modelPositions, 
-    modelRotations, 
-    modelScales,
-    updateModelTransform 
-  } = useStore();
+  // OPTIMIZATION: Use selective subscriptions to prevent re-renders of other models
+  // when one model moves.
+  const isSelected = useStore((state) => state.selectedModelId === modelData.id);
   
-  const [group, setGroup] = useState<THREE.Group | null>(null);
+  const position = useStore((state) => state.modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
+  const rotation = useStore((state) => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
+  const scale = useStore((state) => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
+  
+  const gizmoMode = useStore((state) => state.gizmoMode);
+  const rotationSnap = useStore((state) => state.rotationSnap);
+  const selectModel = useStore((state) => state.selectModel);
+  const updateModelTransform = useStore((state) => state.updateModelTransform);
 
-  const isSelected = selectedModelId === modelData.id;
-  
-  // Read transform from store
-  const position = modelPositions[modelData.id] || { x: 0, y: 0, z: 0 };
-  const rotation = modelRotations[modelData.id] || { x: 0, y: 0, z: 0 };
-  const scale = modelScales[modelData.id] || { x: 1, y: 1, z: 1 };
+  const [group, setGroup] = useState<THREE.Group | null>(null);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation(); 

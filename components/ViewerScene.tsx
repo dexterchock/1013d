@@ -43,38 +43,44 @@ const SceneContent: React.FC<{
   const controlsRef = useRef<CameraControls>(null);
   
   const models = useStore((state) => state.models);
-  const modelPositions = useStore((state) => state.modelPositions);
+  // OPTIMIZATION: Removed subscription to modelPositions to prevent re-rendering the whole scene on drag.
   const isGridVisible = useStore((state) => state.isGridVisible);
   const ppi = useStore((state) => state.ppi);
   const isCalibrationModalOpen = useStore((state) => state.isCalibrationModalOpen);
   
-  // --- Dynamic Centroid Calculation ---
-  // Calculates the center point of all loaded models to focus the spotlight
-  const centroid = useMemo(() => {
-    if (models.length === 0) return { x: 0, y: 0, z: 0 };
-    let sumX = 0, sumY = 0;
-    let count = 0;
-    
-    models.forEach(m => {
-        const pos = modelPositions[m.id] || {x:0, y:0, z:0};
-        sumX += pos.x;
-        sumY += pos.y;
-        count++;
-    });
-    
-    if (count === 0) return { x: 0, y: 0, z: 0 };
-    return { x: sumX / count, y: sumY / count, z: 0 };
-  }, [models, modelPositions]);
-
   // Spotlight target object
   const lightTarget = useMemo(() => {
     const obj = new THREE.Object3D();
     return obj;
   }, []);
 
-  // Update target position to track models
+  // Dynamic Centroid Calculation (Transient)
+  // We read the store directly inside the frame loop to update the light 
+  // without triggering React renders for the Scene component.
   useFrame(() => {
-    lightTarget.position.set(centroid.x, centroid.y, 0);
+    const state = useStore.getState();
+    const positions = state.modelPositions;
+    const currentModels = state.models;
+
+    let cx = 0, cy = 0;
+    let count = 0;
+
+    currentModels.forEach(m => {
+        const pos = positions[m.id];
+        if (pos) {
+            cx += pos.x;
+            cy += pos.y;
+            count++;
+        }
+    });
+
+    if (count > 0) {
+        cx /= count;
+        cy /= count;
+    }
+
+    // Smoothly interpolate light target for a cinematic feel
+    lightTarget.position.lerp(new THREE.Vector3(cx, cy, 0), 0.1);
     lightTarget.updateMatrixWorld();
   });
   
@@ -151,22 +157,25 @@ const SceneContent: React.FC<{
         color="#ffffff" 
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0005} 
-        shadow-normalBias={0.05} 
+        shadow-bias={-0.001} 
+        shadow-normalBias={0.02} 
       />
 
       {/* Dynamic Spotlight - Tracks the models */}
       <primitive object={lightTarget} />
       <spotLight
-        position={[centroid.x, centroid.y, 500]} // High enough to clear large models
+        position={[0, 0, 500]} 
+        ref={(light) => {
+             // Optional: Attach light logic if needed, but the target handles direction.
+        }}
         target={lightTarget}
         angle={0.6}
         penumbra={0.5}
         intensity={3.0}
         castShadow
         color="#ffffff"
-        distance={2000} // Increased range
-        decay={0} // Reduced decay for consistent brightness
+        distance={2000} 
+        decay={0} 
       />
       
       {/* Fill Light - Back side */}
@@ -223,15 +232,15 @@ export const ViewerScene: React.FC<{
             up: [0, 0, 1],
             position: [200, -200, 200], 
             zoom: 5.0,
-            near: -2000, 
-            far: 2000 
+            near: -500, 
+            far: 1000 
         }}
         gl={{ 
             preserveDrawingBuffer: true, 
             antialias: true, 
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2, // Slightly increased exposure
-            logarithmicDepthBuffer: false
+            // logarithmicDepthBuffer: true // Disabled for performance and Z-fighting reduction
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
