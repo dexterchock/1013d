@@ -116,7 +116,7 @@ export const useStore = create<ViewerState>()(
 
       addExampleModel: async () => {
         try {
-            const response = await fetch('/Calibration_cube.stl');
+            const response = await fetch('/Calibration_cube.bin');
             if (!response.ok) throw new Error('Failed to load example model');
             const blob = await response.blob();
             const file = new File([blob], 'Calibration_cube.stl', { type: 'model/stl' });
