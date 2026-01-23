@@ -116,13 +116,18 @@ export const useStore = create<ViewerState>()(
 
       addExampleModel: async () => {
         try {
-            const response = await fetch('/Calibration_cube.bin');
-            if (!response.ok) throw new Error('Failed to load example model');
+            // Use relative path to ensure it works in subdirectories or different environments
+            const response = await fetch('./Calibration_cube.stl');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch example model: ${response.status} ${response.statusText}`);
+            }
             const blob = await response.blob();
-            const file = new File([blob], 'Calibration_cube.stl', { type: 'model/stl' });
+            // Use generic binary type to prevent browser/loader confusion
+            const file = new File([blob], 'Calibration_cube.stl', { type: 'application/octet-stream' });
             get().addModels([file], true);
         } catch (error) {
             console.error("Error loading example model:", error);
+            alert("Could not load 'Calibration_cube.stl'. Please ensure it exists in the public folder.");
         }
       },
 
