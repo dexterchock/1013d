@@ -384,7 +384,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           ref={containerRef}
           className={`
             absolute left-4 top-4 
-            transition-all duration-500 ${easingClass} pointer-events-auto flex flex-col overflow-hidden
+            transition-all duration-500 ${easingClass} pointer-events-auto flex flex-col overflow-hidden rounded-2xl
             ${store.sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
             ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
           `}

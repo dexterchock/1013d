@@ -3,7 +3,7 @@ import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
-import { TransformControls, Text } from '@react-three/drei';
+import { TransformControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
@@ -40,8 +40,9 @@ const SceneProcessor: React.FC<{
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
                 const mesh = child as THREE.Mesh;
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
+                // Shadows removed
+                mesh.castShadow = false;
+                mesh.receiveShadow = false;
                 
                 // Ensure normals exist for correct lighting
                 if (mesh.geometry && !mesh.geometry.attributes.normal) {
@@ -88,48 +89,6 @@ const SceneProcessor: React.FC<{
     return <primitive object={scene} />;
 };
 
-const ProceduralCube: React.FC<{ modelId: string; color: string }> = ({ modelId, color }) => {
-  const { updateModelDimensions } = useStore();
-
-  useEffect(() => {
-    // Report dimensions immediately: 20x20x20mm
-    updateModelDimensions(modelId, 20, 20, 20);
-  }, [modelId, updateModelDimensions]);
-
-  const textProps = {
-    fontSize: 10,
-    color: "white",
-    anchorX: "center" as const,
-    anchorY: "middle" as const,
-    // EXPLICIT FONT URL: Using a standard .woff file without complex tables (GSUB) 
-    // to prevent errors in the text parser.
-    font: 'https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff'
-  };
-
-  return (
-    <group position={[0, 0, 10]}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[20, 20, 20]} />
-        <meshStandardMaterial 
-          color={color} 
-          roughness={0.5} 
-          metalness={0.1}
-          envMapIntensity={1.0}
-        />
-      </mesh>
-
-      {/* Z Face (Top) - Standard View */}
-      <Text position={[0, 0, 10.05]} rotation={[0, 0, 0]} {...textProps}>Z</Text>
-      
-      {/* X Face (Right) - Corrected for Upright Z Orientation */}
-      <Text position={[10.05, 0, 0]} rotation={[0, Math.PI / 2, Math.PI / 2]} {...textProps}>X</Text>
-      
-      {/* Y Face (Back) - Corrected for Upright Z Orientation and Mirroring */}
-      <Text position={[0, 10.05, 0]} rotation={[Math.PI / 2, Math.PI, 0]} {...textProps}>Y</Text>
-    </group>
-  );
-};
-
 const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const obj = useLoader(OBJLoader, url);
   const scene = useMemo(() => obj.clone(), [obj]);
@@ -154,7 +113,6 @@ const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
 
   return (
      <group>
-        {extension === 'cube' && <ProceduralCube modelId={modelData.id} color={modelData.color} />}
         {extension === 'obj' && <ObjLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
         {extension === 'stl' && <StlLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
         {extension === '3mf' && <ThreeMFLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}

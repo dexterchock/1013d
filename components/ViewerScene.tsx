@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { CameraControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
@@ -41,54 +41,39 @@ const SceneContent: React.FC<{
   onMountControls: (controls: CameraControls) => void 
 }> = ({ onMountControls }) => {
   const controlsRef = useRef<CameraControls>(null);
+  const gridRef = useRef<any>(null); // Ref to access Grid material imperatively
+  const lastCheckTime = useRef(0);
   
   const models = useStore((state) => state.models);
-  // OPTIMIZATION: Removed subscription to modelPositions to prevent re-rendering the whole scene on drag.
   const isGridVisible = useStore((state) => state.isGridVisible);
   const ppi = useStore((state) => state.ppi);
   const isCalibrationModalOpen = useStore((state) => state.isCalibrationModalOpen);
   
-  // Spotlight target object
-  const lightTarget = useMemo(() => {
-    const obj = new THREE.Object3D();
-    return obj;
-  }, []);
-
-  // Dynamic Centroid Calculation (Transient)
-  // We read the store directly inside the frame loop to update the light 
-  // without triggering React renders for the Scene component.
-  useFrame(() => {
-    const state = useStore.getState();
-    const positions = state.modelPositions;
-    const currentModels = state.models;
-
-    let cx = 0, cy = 0;
-    let count = 0;
-
-    currentModels.forEach(m => {
-        const pos = positions[m.id];
-        if (pos) {
-            cx += pos.x;
-            cy += pos.y;
-            count++;
-        }
-    });
-
-    if (count > 0) {
-        cx /= count;
-        cy /= count;
-    }
-
-    // Smoothly interpolate light target for a cinematic feel
-    lightTarget.position.lerp(new THREE.Vector3(cx, cy, 0), 0.1);
-    lightTarget.updateMatrixWorld();
-  });
-  
   // Optimization: Cache PPM (Pixels Per Millimeter) calculation
   const ppm = useMemo(() => ppi / 25.4, [ppi]);
 
+  // Imperatively apply Polygon Offset to fix Android Z-Fighting
+  // This bypasses the missing prop types in @react-three/drei's Grid component
+  useLayoutEffect(() => {
+    if (gridRef.current && gridRef.current.material) {
+        const material = gridRef.current.material;
+        material.polygonOffset = true;
+        material.polygonOffsetFactor = 1;
+        material.polygonOffsetUnits = 1;
+        material.needsUpdate = true;
+    }
+  }, [isGridVisible]);
+
   // Optimization: Stabilize function reference to prevent re-creation on every render
   const check1to1Scale = useCallback(() => {
+    // Optimization: Skip if tab is hidden
+    if (document.visibilityState !== 'visible') return;
+
+    // Optimization: Throttle execution to ~10fps (every 100ms)
+    const now = performance.now();
+    if (now - lastCheckTime.current < 100) return;
+    lastCheckTime.current = now;
+
     // Access store state imperatively to avoid dependency thrashing
     const state = useStore.getState();
     
@@ -150,47 +135,18 @@ const SceneContent: React.FC<{
       {/* Ambient light for base visibility */}
       <ambientLight intensity={0.7} />
       
-      {/* Key Light - Sun position from top-right-front */}
+      {/* Single Light Source (No Shadows) */}
       <directionalLight 
-        position={[100, 200, 300]} 
-        intensity={2.0} 
+        position={[50, 50, 200]} 
+        intensity={1.1} 
         color="#ffffff" 
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.001} 
-        shadow-normalBias={0.02} 
-      />
-
-      {/* Dynamic Spotlight - Tracks the models */}
-      <primitive object={lightTarget} />
-      <spotLight
-        position={[0, 0, 500]} 
-        ref={(light) => {
-             // Optional: Attach light logic if needed, but the target handles direction.
-        }}
-        target={lightTarget}
-        angle={0.6}
-        penumbra={0.5}
-        intensity={3.0}
-        castShadow
-        color="#ffffff"
-        distance={2000} 
-        decay={0} 
-      />
-      
-      {/* Fill Light - Back side */}
-      <rectAreaLight 
-        width={40} 
-        height={40} 
-        color="#ffffff" 
-        intensity={1.0} 
-        position={[0, 50, 0]} 
-        lookAt={() => new THREE.Vector3(0,0,0)} 
       />
 
       {isGridVisible && (
           <Grid
-            // LOCKED to origin to prevent sliding
+            ref={gridRef}
+            // LOCKED to origin to prevent sliding.
+            // Keeping physical Z offset as a secondary safeguard against z-fighting.
             position={[0, 0, -0.05]} 
             rotation={[Math.PI / 2, 0, 0]}
             args={[1000, 1000]}
@@ -226,7 +182,7 @@ export const ViewerScene: React.FC<{
       <Canvas
         dpr={[1, 2]}
         orthographic
-        shadows
+        // Shadows disabled
         style={{ touchAction: 'none' }}
         camera={{
             up: [0, 0, 1],
@@ -239,8 +195,8 @@ export const ViewerScene: React.FC<{
             preserveDrawingBuffer: true, 
             antialias: true, 
             toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.2, // Slightly increased exposure
-            // logarithmicDepthBuffer: true // Disabled for performance and Z-fighting reduction
+            toneMappingExposure: 1.0, 
+            logarithmicDepthBuffer: true
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >

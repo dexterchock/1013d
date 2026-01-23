@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ViewerState, DEFAULT_PPI, LoadedModel } from './types';
@@ -78,11 +77,6 @@ export const useStore = create<ViewerState>()(
         // Validate file extensions
         const validExtensions = ['obj', 'stl', '3mf'];
         
-        // Only allow .cube if explicitly marked as internal (for the example model)
-        if (isInternal) {
-            validExtensions.push('cube');
-        }
-
         const validFiles = files.filter((file) => {
             const ext = file.name.split('.').pop()?.toLowerCase();
             return ext && validExtensions.includes(ext);
@@ -120,12 +114,16 @@ export const useStore = create<ViewerState>()(
         });
       },
 
-      addExampleModel: () => {
-        // Create a dummy file that Model.tsx will recognize by extension.
-        // The content is empty because the ProceduralCube component generates the geometry mathematically.
-        // We pass true to bypass validation for this internal file type.
-        const file = new File([""], "20mm_Calibration_Cube.cube", { type: 'application/octet-stream' });
-        get().addModels([file], true);
+      addExampleModel: async () => {
+        try {
+            const response = await fetch('/Calibration_cube.stl');
+            if (!response.ok) throw new Error('Failed to load example model');
+            const blob = await response.blob();
+            const file = new File([blob], 'Calibration_cube.stl', { type: 'model/stl' });
+            get().addModels([file], true);
+        } catch (error) {
+            console.error("Error loading example model:", error);
+        }
       },
 
       removeModel: (id) => {
@@ -218,6 +216,8 @@ export const useStore = create<ViewerState>()(
     {
       name: '1to13d-storage', // Unique name for localStorage key
       partialize: (state) => ({ 
+          // We only persist the PPI and Calibration Settings.
+          // Models contain Blob URLs which are not serializable or persistent across reloads.
           ppi: state.ppi,
           calibrationSettings: state.calibrationSettings
       }), 

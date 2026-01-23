@@ -29,11 +29,28 @@ function App() {
       }
     };
 
+    // Global Key Listener for Deletion
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      const target = e.target as HTMLElement;
+      const isInput = ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable;
+      if (isInput) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const state = useStore.getState();
+        if (state.selectedModelId) {
+          state.removeModel(state.selectedModelId);
+        }
+      }
+    };
+
     window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       clearTimeout(t);
       window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -101,17 +118,6 @@ function App() {
 
       {/* 1:1 Scale Aura Effect */}
       <AuraEffect />
-      
-      {/* Aesthetic Noise Overlay */}
-      <div 
-        className="absolute inset-0 opacity-40 pointer-events-none mix-blend-overlay"
-        style={{ 
-            backgroundImage: "url('/noise.png')",
-            backgroundRepeat: 'repeat',
-            backgroundSize: '100px 100px',
-            imageRendering: 'pixelated'
-        }} 
-      />
 
       {/* 
         The "Curtain" - Prevents FOUC (Flash of Unstyled Content) 
