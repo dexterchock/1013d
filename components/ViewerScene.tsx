@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
@@ -41,7 +41,6 @@ const SceneContent: React.FC<{
   onMountControls: (controls: CameraControls) => void 
 }> = ({ onMountControls }) => {
   const controlsRef = useRef<CameraControls>(null);
-  const gridRef = useRef<any>(null); // Ref to access Grid material imperatively
   const lastCheckTime = useRef(0);
   
   const models = useStore((state) => state.models);
@@ -51,18 +50,6 @@ const SceneContent: React.FC<{
   
   // Optimization: Cache PPM (Pixels Per Millimeter) calculation
   const ppm = useMemo(() => ppi / 25.4, [ppi]);
-
-  // Imperatively apply Polygon Offset to fix Android Z-Fighting
-  // This bypasses the missing prop types in @react-three/drei's Grid component
-  useLayoutEffect(() => {
-    if (gridRef.current && gridRef.current.material) {
-        const material = gridRef.current.material;
-        material.polygonOffset = true;
-        material.polygonOffsetFactor = 1;
-        material.polygonOffsetUnits = 1;
-        material.needsUpdate = true;
-    }
-  }, [isGridVisible]);
 
   // Optimization: Stabilize function reference to prevent re-creation on every render
   const check1to1Scale = useCallback(() => {
@@ -144,9 +131,7 @@ const SceneContent: React.FC<{
 
       {isGridVisible && (
           <Grid
-            ref={gridRef}
-            // LOCKED to origin to prevent sliding.
-            // Keeping physical Z offset as a secondary safeguard against z-fighting.
+            // LOCKED to origin to prevent sliding
             position={[0, 0, -0.05]} 
             rotation={[Math.PI / 2, 0, 0]}
             args={[1000, 1000]}
@@ -196,7 +181,6 @@ export const ViewerScene: React.FC<{
             antialias: true, 
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.0, 
-            logarithmicDepthBuffer: true
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >

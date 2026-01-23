@@ -5,7 +5,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Cache-Control: public, max-age=0, must-revalidate
 
-# This part covers all your icons sitting in the root
+# Force STL files to be served as binary 3D data
+/*.stl
+  Content-Type: application/sla
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+
+# Icons and Manifest
 /favicon.ico
   Cache-Control: public, max-age=31536000, immutable
 /favicon-32x32.png
