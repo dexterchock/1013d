@@ -132,7 +132,7 @@ const SceneContent: React.FC<{
       {isGridVisible && (
           <Grid
             // LOCKED to origin to prevent sliding
-            position={[0, 0, -1]} 
+            position={[0, 0, -0.05]} 
             rotation={[Math.PI / 2, 0, 0]}
             args={[1000, 1000]}
             cellSize={10}
@@ -144,7 +144,10 @@ const SceneContent: React.FC<{
             fadeDistance={450} 
             fadeStrength={1.5}
             infiniteGrid
-            renderOrder={-10}
+            renderOrder={-100}
+            depthTest={false}
+            depthWrite={false}
+            transparent={true}
           />
       )}
 
@@ -181,6 +184,7 @@ export const ViewerScene: React.FC<{
             antialias: true, 
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.0, 
+            precision: 'highp',
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
