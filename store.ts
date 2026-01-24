@@ -1,43 +1,34 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ViewerState, DEFAULT_PPI, LoadedModel } from './types';
+import { cubeData } from './cubeData'; // Imports the Uint8Array
 
-// Helper to generate distinct colors
-// Changed from pastel (80% lightness) to a deeper shade (50% lightness) 
-// to avoid blown-out highlights in the viewer.
+// --- Helper Functions ---
+
 const generateModelColor = () => {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue}, 60%, 50%)`;
 };
 
-// Layout Configuration
-const LAYOUT_GAP = 10; // 10mm gap as requested
+const LAYOUT_GAP = 10; 
 
-// Helper to recalculate positions based on current models and their dimensions
+// Helper to recalculate positions
 const calculatePositions = (
   models: LoadedModel[], 
   dimensions: Record<string, { x: number; y: number; z: number }>
 ) => {
   const positions: Record<string, { x: number; y: number; z: number }> = {};
-  
-  // We'll arrange them in a simple row along X axis for now to ensure tight packing
   let currentX = 0;
 
-  models.forEach((model, index) => {
-    const dim = dimensions[model.id] || { x: 100, y: 100, z: 100 }; // Default size if not loaded
-    
-    // Centered pivot assumption from Model.tsx
+  models.forEach((model) => {
+    const dim = dimensions[model.id] || { x: 100, y: 100, z: 100 }; 
     const halfWidth = dim.x / 2;
-    
-    // Place center at currentX + halfWidth
     const centerX = currentX + halfWidth;
     
     positions[model.id] = { x: centerX, y: 0, z: 0 };
-    
     currentX += dim.x + LAYOUT_GAP;
   });
 
-  // Optional: Center the whole group
   const totalWidth = currentX - LAYOUT_GAP;
   const shiftX = -totalWidth / 2;
   
@@ -48,20 +39,22 @@ const calculatePositions = (
   return positions;
 };
 
+// --- Store Implementation ---
+
 export const useStore = create<ViewerState>()(
   persist(
     (set, get) => ({
+      // Initial State
       models: [],
       selectedModelId: null,
       ppi: DEFAULT_PPI,
       isGridVisible: true,
-      gizmoMode: 'translate', // Default to move
+      gizmoMode: 'translate',
       rotationSnap: Math.PI / 4, // Default 45 degrees
       sidebarOpen: true,
       is1to1Mode: false,
       isCalibrationModalOpen: false,
       
-      // Default calibration settings based on typical screen
       calibrationSettings: {
           resolutionWidth: window.screen.width,
           resolutionHeight: window.screen.height,
@@ -73,8 +66,8 @@ export const useStore = create<ViewerState>()(
       modelRotations: {},
       modelScales: {},
 
+      // Actions
       addModels: (files, isInternal = false) => {
-        // Validate file extensions
         const validExtensions = ['obj', 'stl', '3mf'];
         
         const validFiles = files.filter((file) => {
@@ -88,14 +81,13 @@ export const useStore = create<ViewerState>()(
           id: crypto.randomUUID(),
           file,
           url: URL.createObjectURL(file),
-          color: generateModelColor(),
+          color: generateModelColor(), 
           visible: true,
         }));
         
         set((state) => {
           const updatedModels = [...state.models, ...newModels];
           
-          // Initialize rotations and scales
           const newRotations = { ...state.modelRotations };
           const newScales = { ...state.modelScales };
           newModels.forEach(m => {
@@ -106,7 +98,6 @@ export const useStore = create<ViewerState>()(
           return { 
             models: updatedModels,
             selectedModelId: newModels.length > 0 ? newModels[newModels.length - 1].id : state.selectedModelId,
-            // Recalculate with existing dimensions (new models have 0/default dims initially)
             modelPositions: calculatePositions(updatedModels, state.modelDimensions),
             modelRotations: newRotations,
             modelScales: newScales
@@ -116,18 +107,20 @@ export const useStore = create<ViewerState>()(
 
       addExampleModel: async () => {
         try {
-            // Use relative path to ensure it works in subdirectories or different environments
-            const response = await fetch('./Calibration_cube.stl');
-            if (!response.ok) {
-                throw new Error(`Failed to fetch example model: ${response.status} ${response.statusText}`);
-            }
-            const blob = await response.blob();
-            // Use generic binary type to prevent browser/loader confusion
-            const file = new File([blob], 'Calibration_cube.stl', { type: 'application/octet-stream' });
+            // 1. Create Blob directly from the imported Uint8Array
+            // This bypasses fetch, servers, and base64 decoding entirely.
+            const blob = new Blob([cubeData], { type: 'application/octet-stream' });
+
+            // 2. Create a File object from the Blob
+            const file = new File([blob], 'Calibration_cube.stl', { 
+                type: 'application/octet-stream' 
+            });
+
+            // 3. Add to the scene using the standard loader
             get().addModels([file], true);
+
         } catch (error) {
-            console.error("Error loading example model:", error);
-            alert("Could not load 'Calibration_cube.stl'. Please ensure it exists in the public folder.");
+            console.error("Error loading embedded example model:", error);
         }
       },
 
@@ -137,10 +130,12 @@ export const useStore = create<ViewerState>()(
           if (model) URL.revokeObjectURL(model.url);
           
           const newModels = state.models.filter((m) => m.id !== id);
+          
+          // Clean up associated state maps
           const { [id]: removedDim, ...remainingDimensions } = state.modelDimensions;
           const { [id]: removedRot, ...remainingRotations } = state.modelRotations;
           const { [id]: removedScale, ...remainingScales } = state.modelScales;
-          const { [id]: removedPos, ...remainingPositions } = state.modelPositions; // Manually remove key, then recalc
+          const { [id]: removedPos, ...remainingPositions } = state.modelPositions;
           
           return { 
             models: newModels,
@@ -155,11 +150,9 @@ export const useStore = create<ViewerState>()(
 
       selectModel: (id) => set({ 
         selectedModelId: id,
-        // Removed gizmoMode reset here to persist user's tool choice
       }),
 
       setPPI: (ppi) => {
-        // Validate to ensure we don't save NaN or invalid values
         if (typeof ppi === 'number' && isFinite(ppi) && ppi > 0) {
             set({ ppi });
         }
@@ -170,6 +163,7 @@ export const useStore = create<ViewerState>()(
       })),
 
       toggleGrid: () => set((state) => ({ isGridVisible: !state.isGridVisible })),
+      
       setGizmoMode: (mode) => set({ gizmoMode: mode }),
       
       setRotationSnap: (angleDeg) => set({ 
@@ -184,8 +178,8 @@ export const useStore = create<ViewerState>()(
 
       updateModelDimensions: (id, x, y, z) => {
         set((state) => {
-            // Only update if changed significantly to avoid loops
             const current = state.modelDimensions[id];
+            // Prevent infinite loops by checking if the change is significant
             if (current && Math.abs(current.x - x) < 0.1 && Math.abs(current.y - y) < 0.1) {
                 return {};
             }
@@ -219,10 +213,10 @@ export const useStore = create<ViewerState>()(
       }
     }),
     {
-      name: '1to13d-storage', // Unique name for localStorage key
+      name: '1to13d-storage', 
       partialize: (state) => ({ 
-          // We only persist the PPI and Calibration Settings.
-          // Models contain Blob URLs which are not serializable or persistent across reloads.
+          // We persist PPI and Calibration, but NOT the models themselves
+          // because Blob URLs cannot be saved to localStorage.
           ppi: state.ppi,
           calibrationSettings: state.calibrationSettings
       }), 
