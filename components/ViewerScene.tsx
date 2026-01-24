@@ -139,16 +139,13 @@ const SceneContent: React.FC<{
             sectionSize={100}
             cellColor="#333333"
             sectionColor="#5a5a5a"
-            // Increased thickness to prevent aliasing on mobile (sub-pixel lines look jagged)
-            cellThickness={1.0}
-            sectionThickness={1.5}
+            cellThickness={0.8}
+            sectionThickness={1.2}
             fadeDistance={450} 
             fadeStrength={1.5}
             infiniteGrid
-            renderOrder={-100}
-            depthTest={false}
+            renderOrder={-10}
             depthWrite={false}
-            transparent={true}
           />
       )}
 
@@ -177,8 +174,8 @@ export const ViewerScene: React.FC<{
             up: [0, 0, 1],
             position: [200, -200, 200], 
             zoom: 5.0,
-            near: -0.1, 
-            far: 100 
+            near: -500, 
+            far: 1000 
         }}
         gl={{ 
             preserveDrawingBuffer: true, 
@@ -187,7 +184,6 @@ export const ViewerScene: React.FC<{
             toneMappingExposure: 1.0, 
             precision: 'highp',
             powerPreference: 'high-performance',
-            stencil: false,
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
