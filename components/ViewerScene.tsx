@@ -139,8 +139,9 @@ const SceneContent: React.FC<{
             sectionSize={100}
             cellColor="#333333"
             sectionColor="#5a5a5a"
-            cellThickness={0.8}
-            sectionThickness={1.2}
+            // Increased thickness to prevent aliasing on mobile (sub-pixel lines look jagged)
+            cellThickness={1.0}
+            sectionThickness={1.5}
             fadeDistance={450} 
             fadeStrength={1.5}
             infiniteGrid
@@ -185,6 +186,8 @@ export const ViewerScene: React.FC<{
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.0, 
             precision: 'highp',
+            powerPreference: 'high-performance',
+            stencil: false,
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
