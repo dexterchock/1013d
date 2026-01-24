@@ -173,8 +173,8 @@ export const ViewerScene: React.FC<{
             up: [0, 0, 1],
             position: [200, -200, 200], 
             zoom: 5.0,
-            near: 0.1, 
-            far: 500 
+            near: -250, 
+            far: 1000 
         }}
         gl={{ 
             preserveDrawingBuffer: true, 
