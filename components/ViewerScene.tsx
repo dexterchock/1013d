@@ -145,7 +145,6 @@ const SceneContent: React.FC<{
             fadeStrength={1.5}
             infiniteGrid
             renderOrder={-10}
-            depthWrite={false}
           />
       )}
 

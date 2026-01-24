@@ -36,6 +36,14 @@ const SceneProcessor: React.FC<{
     const { updateModelDimensions } = useStore();
 
     useEffect(() => {
+        // --- DRIFT FIX ---
+        // Immediately reset transforms to prevent cumulative drift on re-renders.
+        // Without this, applying an offset to an already offset mesh causes it to fly away.
+        scene.position.set(0, 0, 0);
+        scene.rotation.set(0, 0, 0);
+        scene.scale.set(1, 1, 1);
+        scene.updateMatrixWorld(true);
+
         // 1. Apply Color & Material
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
@@ -69,19 +77,27 @@ const SceneProcessor: React.FC<{
 
         // 4. Calculate Bounding Box
         const box = new THREE.Box3().setFromObject(scene);
-        const size = new THREE.Vector3();
-        box.getSize(size);
         const center = new THREE.Vector3();
         box.getCenter(center);
+        const size = new THREE.Vector3();
+        box.getSize(size);
 
-        // 5. Center Internally (Geometry Center -> Local 0,0,0)
-        // Z-UP: Drop to floor
-        const bottomZ = box.min.z;
-        scene.position.x = -center.x;
-        scene.position.y = -center.y;
-        scene.position.z = -bottomZ; 
+        // 5. FIX: Convert World Center to Local Center
+        // We want to know where the center is relative to the PARENT group, not the world.
+        // This ensures that even if the mesh has some internal offsets or if parents are moved,
+        // we calculate the correct counter-offset.
+        const localCenter = scene.worldToLocal(center.clone());
 
-        // 6. Report Dimensions to Store
+        // 6. Apply Center Offset (Use Local Center!)
+        scene.position.x = -localCenter.x;
+        scene.position.y = -localCenter.y;
+        
+        // For Z, we want the bottom of the box to be at 0.
+        // localCenter.z corresponds to the geometric center.
+        // We shift by -localCenter.z to center it on Z, then add half height.
+        scene.position.z = -localCenter.z + (size.z / 2); 
+
+        // 7. Report Dimensions to Store
         updateModelDimensions(modelId, size.x, size.y, size.z);
 
     }, [scene, color, isNativeYUp, modelId, updateModelDimensions]);
@@ -98,7 +114,6 @@ const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, 
 const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const geom = useLoader(STLLoader, url);
   const mesh = useMemo(() => new THREE.Mesh(geom), [geom]);
-  // FIX: Passed 'mesh' instead of undefined 'scene' variable
   return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
 };
 
@@ -131,6 +146,13 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
   const rotation = useStore((state) => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
   const scale = useStore((state) => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
   
+  // FIX: FLASH PREVENT
+  // We check if dimensions have been calculated for this model.
+  // If not, we hide the group. This prevents the model from flashing at 0,0,0 
+  // before the layout engine positions it.
+  const dimensions = useStore((state) => state.modelDimensions[modelData.id]);
+  const isReady = !!dimensions;
+
   const gizmoMode = useStore((state) => state.gizmoMode);
   const rotationSnap = useStore((state) => state.rotationSnap);
   const selectModel = useStore((state) => state.selectModel);
@@ -145,7 +167,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
 
   return (
     <>
-      {isSelected && group && (
+      {isSelected && group && isReady && (
         <TransformControls 
           object={group} 
           mode={gizmoMode} 
@@ -173,6 +195,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
         scale={[scale.x, scale.y, scale.z]}
         onClick={handleClick}
         onPointerMissed={() => {}}
+        visible={isReady && modelData.visible}
       >
          <InnerModel modelData={modelData} />
       </group>

@@ -21,7 +21,16 @@ const calculatePositions = (
   let currentX = 0;
 
   models.forEach((model) => {
-    const dim = dimensions[model.id] || { x: 100, y: 100, z: 100 }; 
+    const dim = dimensions[model.id];
+
+    // FIX: If dimensions are unknown (loading), ignore this model in the layout.
+    // This prevents existing models from "jumping" to make room for a default 100mm 
+    // placeholder, only to "jump back" when the real (smaller) size is found.
+    if (!dim) {
+        positions[model.id] = { x: 0, y: 0, z: 0 };
+        return; 
+    }
+
     const halfWidth = dim.x / 2;
     const centerX = currentX + halfWidth;
     
@@ -30,10 +39,14 @@ const calculatePositions = (
   });
 
   const totalWidth = currentX - LAYOUT_GAP;
-  const shiftX = -totalWidth / 2;
+  // If no models have dimensions yet, prevent division issues (though shiftX=0 is fine)
+  const shiftX = currentX > 0 ? -totalWidth / 2 : 0;
   
   Object.keys(positions).forEach(key => {
-    positions[key].x += shiftX;
+    // Only shift models that were actually part of the layout
+    if (dimensions[key]) {
+        positions[key].x += shiftX;
+    }
   });
 
   return positions;
