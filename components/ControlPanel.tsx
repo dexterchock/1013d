@@ -548,24 +548,20 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         
                         <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
-                            <label htmlFor="res-width" className="text-[10px] text-white/40 block mb-1">Width (px)</label>
-                            <CalibrationInput 
-                                id="res-width" 
-                                value={resolutionWidth} 
-                                readOnly
-                            />
+                            <label className="text-[10px] text-white/40 block mb-1">Width</label>
+                            <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                                {resolutionWidth} px
+                            </div>
                             </div>
                             <div>
-                            <label htmlFor="res-height" className="text-[10px] text-white/40 block mb-1">Height (px)</label>
-                            <CalibrationInput 
-                                id="res-height" 
-                                value={resolutionHeight} 
-                                readOnly
-                            />
+                            <label className="text-[10px] text-white/40 block mb-1">Height</label>
+                            <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                                {resolutionHeight} px
+                            </div>
                             </div>
                         </div>
                         <p className="text-[10px] text-white/30 italic mb-2 leading-tight">
-                            *Auto-detected logical resolution. This may differ from native resolution due to OS scaling.
+                            * Logical resolution detected (OS scaling applied).
                         </p>
                         
                         <div className="mb-3">
