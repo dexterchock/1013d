@@ -1,3 +1,5 @@
+# 1. Global Security & HTML (No Cache)
+# Keeps your site safe and ensures users always see the latest version.
 /*
   X-Robots-Tag: index, follow
   X-Frame-Options: DENY
@@ -5,7 +7,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Cache-Control: public, max-age=0, must-revalidate
 
-# Icons and Manifest
+# 2. Vite Assets (The Big Performance Boost)
+# Your compiled JS and CSS live here. Safe to cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 3. Static Images & Icons (Cache Forever)
+# I added og-image.jpg here since it was missing before.
 /favicon.ico
   Cache-Control: public, max-age=31536000, immutable
 /favicon-32x32.png
@@ -16,5 +24,14 @@
   Cache-Control: public, max-age=31536000, immutable
 /android-chrome-512x512.png
   Cache-Control: public, max-age=31536000, immutable
+/og-image.jpg
+  Cache-Control: public, max-age=31536000, immutable
 /manifest.json
   Cache-Control: public, max-age=31536000, immutable
+
+# 4. Search Engine Files (Do NOT Cache)
+# You want Google to see changes to your sitemap immediately.
+/sitemap.xml
+  Cache-Control: public, max-age=0, must-revalidate
+/robots.txt
+  Cache-Control: public, max-age=0, must-revalidate
