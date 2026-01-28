@@ -88,10 +88,11 @@ const NumberInput: React.FC<{
 // Robust input for calibration fields that handles focus/sync correctly to allow deletion
 const CalibrationInput: React.FC<{
     value: number;
-    onChange: (val: number) => void;
+    onChange?: (val: number) => void;
     id: string;
     placeholder?: string;
-}> = ({ value, onChange, id, placeholder }) => {
+    readOnly?: boolean;
+}> = ({ value, onChange, id, placeholder, readOnly = false }) => {
     const [localValue, setLocalValue] = useState(value.toString());
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +104,7 @@ const CalibrationInput: React.FC<{
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly || !onChange) return;
         const val = e.target.value;
         setLocalValue(val);
         const num = parseFloat(val);
@@ -114,6 +116,7 @@ const CalibrationInput: React.FC<{
     };
 
     const handleBlur = () => {
+        if (readOnly) return;
         // On blur, if invalid (empty), revert to last known good store value
         const num = parseFloat(localValue);
         if (isNaN(num)) {
@@ -133,7 +136,14 @@ const CalibrationInput: React.FC<{
             value={localValue} 
             onChange={handleChange} 
             onBlur={handleBlur}
-            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/20"
+            readOnly={readOnly}
+            className={`
+                w-full border rounded px-2 py-1 text-xs 
+                ${readOnly 
+                    ? 'bg-white/5 border-transparent text-white/50 cursor-not-allowed select-none' 
+                    : 'bg-white/5 border-white/10 text-white placeholder-white/20 focus:border-white/30'
+                }
+            `}
             placeholder={placeholder}
         />
     );
@@ -290,6 +300,22 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Height Animation Logic using direct DOM manipulation for performance
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-sync resolution on mount and resize
+  useEffect(() => {
+    const handleResize = () => {
+        store.setCalibrationSettings({
+            resolutionWidth: window.screen.width,
+            resolutionHeight: window.screen.height
+        });
+    };
+    
+    // Initial sync
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // Empty dependency array ensures this runs once on mount + listeners
 
   useEffect(() => {
     const content = contentRef.current;
@@ -526,7 +552,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             <CalibrationInput 
                                 id="res-width" 
                                 value={resolutionWidth} 
-                                onChange={(val) => store.setCalibrationSettings({ resolutionWidth: val })}
+                                readOnly
                             />
                             </div>
                             <div>
@@ -534,10 +560,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             <CalibrationInput 
                                 id="res-height" 
                                 value={resolutionHeight} 
-                                onChange={(val) => store.setCalibrationSettings({ resolutionHeight: val })}
+                                readOnly
                             />
                             </div>
                         </div>
+                        <p className="text-[10px] text-white/30 italic mb-2 leading-tight">
+                            *Auto-detected logical resolution. This may differ from native resolution due to OS scaling.
+                        </p>
                         
                         <div className="mb-3">
                             <label htmlFor="monitor-size" className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
