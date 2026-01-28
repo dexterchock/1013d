@@ -83,7 +83,7 @@ function App() {
   };
 
   return (
-    <div 
+    <main 
         className="w-screen h-[100dvh] relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
@@ -131,7 +131,7 @@ function App() {
             ${isMounted ? 'opacity-0' : 'opacity-100'}
         `}
       />
-    </div>
+    </main>
   );
 }
 

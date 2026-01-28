@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ViewerState, DEFAULT_PPI, LoadedModel } from './types';
-import { cubeData } from './cubeData'; // Imports the Uint8Array
 
 // --- Helper Functions ---
 
@@ -120,6 +119,9 @@ export const useStore = create<ViewerState>()(
 
       addExampleModel: async () => {
         try {
+            // Dynamically import data to save initial bundle size
+            const { cubeData } = await import('./cubeData');
+
             // 1. Create Blob directly from the imported Uint8Array
             // This bypasses fetch, servers, and base64 decoding entirely.
             const blob = new Blob([cubeData], { type: 'application/octet-stream' });
