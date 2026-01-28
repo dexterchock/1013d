@@ -88,10 +88,11 @@ const NumberInput: React.FC<{
 // Robust input for calibration fields that handles focus/sync correctly to allow deletion
 const CalibrationInput: React.FC<{
     value: number;
-    onChange: (val: number) => void;
+    onChange?: (val: number) => void;
     id: string;
     placeholder?: string;
-}> = ({ value, onChange, id, placeholder }) => {
+    readOnly?: boolean;
+}> = ({ value, onChange, id, placeholder, readOnly = false }) => {
     const [localValue, setLocalValue] = useState(value.toString());
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +104,7 @@ const CalibrationInput: React.FC<{
     }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly || !onChange) return;
         const val = e.target.value;
         setLocalValue(val);
         const num = parseFloat(val);
@@ -114,6 +116,7 @@ const CalibrationInput: React.FC<{
     };
 
     const handleBlur = () => {
+        if (readOnly) return;
         // On blur, if invalid (empty), revert to last known good store value
         const num = parseFloat(localValue);
         if (isNaN(num)) {
@@ -133,7 +136,14 @@ const CalibrationInput: React.FC<{
             value={localValue} 
             onChange={handleChange} 
             onBlur={handleBlur}
-            className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/20"
+            readOnly={readOnly}
+            className={`
+                w-full border rounded px-2 py-1 text-xs 
+                ${readOnly 
+                    ? 'bg-white/5 border-transparent text-white/50 cursor-not-allowed select-none' 
+                    : 'bg-white/5 border-white/10 text-white placeholder-white/20 focus:border-white/30'
+                }
+            `}
             placeholder={placeholder}
         />
     );
@@ -200,6 +210,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                         store.removeModel(model.id);
                     }}
                     className="text-white/20 hover:text-red-400 px-2 transition-colors"
+                    aria-label={`Remove model ${model.file.name}`}
                 >
                     ×
                 </button>
@@ -289,6 +300,22 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Height Animation Logic using direct DOM manipulation for performance
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-sync resolution on mount and resize
+  useEffect(() => {
+    const handleResize = () => {
+        store.setCalibrationSettings({
+            resolutionWidth: window.screen.width,
+            resolutionHeight: window.screen.height
+        });
+    };
+    
+    // Initial sync
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // Empty dependency array ensures this runs once on mount + listeners
 
   useEffect(() => {
     const content = contentRef.current;
@@ -414,6 +441,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             <button 
                                 onClick={() => setShowAbout(!showAbout)}
                                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${showAbout ? 'bg-white/20 text-white' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'}`}
+                                aria-label="About 1013D"
                             >
                                 <InfoIcon />
                             </button>
@@ -421,6 +449,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <button 
                             onClick={store.toggleSidebar}
                             className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                            aria-label={store.sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
                         >
                             {store.sidebarOpen ? <ChevronUp/> : <ChevronDown/>}
                         </button>
@@ -519,22 +548,21 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         
                         <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
-                            <label htmlFor="res-width" className="text-[10px] text-white/40 block mb-1">Width (px)</label>
-                            <CalibrationInput 
-                                id="res-width" 
-                                value={resolutionWidth} 
-                                onChange={(val) => store.setCalibrationSettings({ resolutionWidth: val })}
-                            />
+                            <label className="text-[10px] text-white/40 block mb-1">Width</label>
+                            <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                                {resolutionWidth} px
+                            </div>
                             </div>
                             <div>
-                            <label htmlFor="res-height" className="text-[10px] text-white/40 block mb-1">Height (px)</label>
-                            <CalibrationInput 
-                                id="res-height" 
-                                value={resolutionHeight} 
-                                onChange={(val) => store.setCalibrationSettings({ resolutionHeight: val })}
-                            />
+                            <label className="text-[10px] text-white/40 block mb-1">Height</label>
+                            <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                                {resolutionHeight} px
+                            </div>
                             </div>
                         </div>
+                        <p className="text-[10px] text-white/30 italic mb-2 leading-tight">
+                            * Logical resolution detected (OS scaling applied).
+                        </p>
                         
                         <div className="mb-3">
                             <label htmlFor="monitor-size" className="text-[10px] text-white/40 block mb-1">Diagonal Size (Inches)</label>
@@ -594,6 +622,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   key={axis}
                   onClick={() => transitionToAxis(controlsRef.current, axis)}
                   className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
+                  aria-label={`View ${axis} axis`}
                >
                  {axis}
                </button>
@@ -613,6 +642,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ${store.gizmoMode === 'translate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                     `}
                     title="Move"
+                    aria-label="Move Tool"
                 >
                     <MoveIcon />
                 </button>
@@ -624,6 +654,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ${store.gizmoMode === 'rotate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                     `}
                     title="Rotate"
+                    aria-label="Rotate Tool"
                 >
                     <RotateIcon />
                 </button>
@@ -640,6 +671,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                         `}
                         title="Snap"
+                        aria-label="Toggle Rotation Snap"
                      >
                         <MagnetIcon />
                      </button>
@@ -656,6 +688,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ? 'bg-blue-600 text-white shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]' 
                         : 'bg-transparent text-white/40 hover:bg-white/5 hover:text-white'}
                 `}
+                aria-label="Activate 1 to 1 real world scale"
             >
                 1:1
             </button>
