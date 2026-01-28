@@ -233,8 +233,25 @@ export const useStore = create<ViewerState>()(
           // We persist PPI and Calibration, but NOT the models themselves
           // because Blob URLs cannot be saved to localStorage.
           ppi: state.ppi,
-          calibrationSettings: state.calibrationSettings
+          // Only persist diagonalInches. We specifically exclude resolution so it is
+          // always re-evaluated from the browser environment on load.
+          calibrationSettings: {
+              diagonalInches: state.calibrationSettings.diagonalInches
+          }
       }), 
+      merge: (persistedState: any, currentState) => {
+        return {
+            ...currentState,
+            ...persistedState,
+            calibrationSettings: {
+                ...currentState.calibrationSettings, // Has default window.screen values
+                ...(persistedState.calibrationSettings || {}), // Overwrites diagonalInches
+                // Force fresh window dimensions to handle DPR/resolution changes between sessions
+                resolutionWidth: window.screen.width,
+                resolutionHeight: window.screen.height,
+            }
+        };
+      },
     }
   )
 );
