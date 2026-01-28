@@ -200,6 +200,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                         store.removeModel(model.id);
                     }}
                     className="text-white/20 hover:text-red-400 px-2 transition-colors"
+                    aria-label={`Remove model ${model.file.name}`}
                 >
                     ×
                 </button>
@@ -414,6 +415,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             <button 
                                 onClick={() => setShowAbout(!showAbout)}
                                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${showAbout ? 'bg-white/20 text-white' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'}`}
+                                aria-label="About 1013D"
                             >
                                 <InfoIcon />
                             </button>
@@ -421,6 +423,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <button 
                             onClick={store.toggleSidebar}
                             className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                            aria-label={store.sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
                         >
                             {store.sidebarOpen ? <ChevronUp/> : <ChevronDown/>}
                         </button>
@@ -594,6 +597,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   key={axis}
                   onClick={() => transitionToAxis(controlsRef.current, axis)}
                   className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
+                  aria-label={`View ${axis} axis`}
                >
                  {axis}
                </button>
@@ -613,6 +617,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ${store.gizmoMode === 'translate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                     `}
                     title="Move"
+                    aria-label="Move Tool"
                 >
                     <MoveIcon />
                 </button>
@@ -624,6 +629,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ${store.gizmoMode === 'rotate' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                     `}
                     title="Rotate"
+                    aria-label="Rotate Tool"
                 >
                     <RotateIcon />
                 </button>
@@ -640,6 +646,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                             ${store.rotationSnap !== null ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'}
                         `}
                         title="Snap"
+                        aria-label="Toggle Rotation Snap"
                      >
                         <MagnetIcon />
                      </button>
@@ -656,6 +663,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         ? 'bg-blue-600 text-white shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]' 
                         : 'bg-transparent text-white/40 hover:bg-white/5 hover:text-white'}
                 `}
+                aria-label="Activate 1 to 1 real world scale"
             >
                 1:1
             </button>
