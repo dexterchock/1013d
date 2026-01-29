@@ -15,7 +15,9 @@
     "@react-three/fiber": "^8.17.10",
     "@react-three/drei": "^9.120.0",
     "zustand": "^4.5.4",
-    "@google/model-viewer": "^4.0.0"
+    "@google/model-viewer": "^4.0.0",
+    "@fontsource/inter": "^5.0.0",
+    "@fontsource/jetbrains-mono": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
