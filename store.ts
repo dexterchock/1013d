@@ -23,8 +23,6 @@ const calculatePositions = (
     const dim = dimensions[model.id];
 
     // FIX: If dimensions are unknown (loading), ignore this model in the layout.
-    // This prevents existing models from "jumping" to make room for a default 100mm 
-    // placeholder, only to "jump back" when the real (smaller) size is found.
     if (!dim) {
         positions[model.id] = { x: 0, y: 0, z: 0 };
         return; 
@@ -38,11 +36,9 @@ const calculatePositions = (
   });
 
   const totalWidth = currentX - LAYOUT_GAP;
-  // If no models have dimensions yet, prevent division issues (though shiftX=0 is fine)
   const shiftX = currentX > 0 ? -totalWidth / 2 : 0;
   
   Object.keys(positions).forEach(key => {
-    // Only shift models that were actually part of the layout
     if (dimensions[key]) {
         positions[key].x += shiftX;
     }
@@ -133,21 +129,12 @@ export const useStore = create<ViewerState & ArState>()(
 
       addExampleModel: async () => {
         try {
-            // Dynamically import data to save initial bundle size
             const { cubeData } = await import('./cubeData');
-
-            // 1. Create Blob directly from the imported Uint8Array
-            // This bypasses fetch, servers, and base64 decoding entirely.
             const blob = new Blob([cubeData], { type: 'application/octet-stream' });
-
-            // 2. Create a File object from the Blob
             const file = new File([blob], 'Calibration_cube.stl', { 
                 type: 'application/octet-stream' 
             });
-
-            // 3. Add to the scene using the standard loader
             get().addModels([file], true);
-
         } catch (error) {
             console.error("Error loading embedded example model:", error);
         }
@@ -208,7 +195,6 @@ export const useStore = create<ViewerState & ArState>()(
       updateModelDimensions: (id, x, y, z) => {
         set((state) => {
             const current = state.modelDimensions[id];
-            // Prevent infinite loops by checking if the change is significant
             if (current && Math.abs(current.x - x) < 0.1 && Math.abs(current.y - y) < 0.1) {
                 return {};
             }
@@ -244,16 +230,19 @@ export const useStore = create<ViewerState & ArState>()(
       // AR Actions
       setArSupported: (supported) => set({ isArSupported: supported }),
       triggerArGeneration: () => set({ arGenerationRequest: Date.now() }),
-      setArModelUrl: (url) => set({ arModelUrl: url }),
+      
+      // CLEANUP: Revoke the old Blob URL before setting the new one to prevent memory leaks
+      setArModelUrl: (url) => set((state) => {
+          if (state.arModelUrl) {
+              URL.revokeObjectURL(state.arModelUrl);
+          }
+          return { arModelUrl: url };
+      }),
     }),
     {
       name: '1to13d-storage', 
       partialize: (state) => ({ 
-          // We persist PPI and Calibration, but NOT the models themselves
-          // because Blob URLs cannot be saved to localStorage.
           ppi: state.ppi,
-          // Only persist diagonalInches. We specifically exclude resolution so it is
-          // always re-evaluated from the browser environment on load.
           calibrationSettings: {
               diagonalInches: state.calibrationSettings.diagonalInches
           }
@@ -263,9 +252,8 @@ export const useStore = create<ViewerState & ArState>()(
             ...currentState,
             ...persistedState,
             calibrationSettings: {
-                ...currentState.calibrationSettings, // Has default window.screen values
-                ...(persistedState.calibrationSettings || {}), // Overwrites diagonalInches
-                // Force fresh window dimensions to handle DPR/resolution changes between sessions
+                ...currentState.calibrationSettings, 
+                ...(persistedState.calibrationSettings || {}), 
                 resolutionWidth: window.screen.width,
                 resolutionHeight: window.screen.height,
             }
