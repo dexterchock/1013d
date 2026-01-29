@@ -177,20 +177,30 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     // The timestamp changed, meaning a new request came in for the *selected* model.
     const exporter = new GLTFExporter();
     
-    // We clone the group so we can prepare it for AR without affecting the scene.
-    // However, in this Viewer, 'scale' is often used to resize dimensions (1mm = 1 unit).
-    // AR Quick Look expects 1 unit = 1 meter usually, OR standard glTF units.
-    // Three.js and model-viewer usually agree that 1 unit = 1 meter.
-    // But our viewer treats 1 unit = 1mm (implied by the 1:1 math using PPI).
-    // So we need to scale the exported model down by 0.001 to convert mm to meters for AR.
-    const arScene = group.clone();
+    // Clone the current model state (geometry + materials + current local transforms)
+    const modelClone = group.clone();
     
-    // Convert Viewer Space (mm) to AR Space (meters)
-    arScene.scale.multiplyScalar(0.001);
-    arScene.updateMatrixWorld(true);
+    // --- WRAPPER HIERARCHY ---
+    // 1. Units Wrapper: 
+    //    Scales everything by 0.001 to convert millimeters (Viewer) to meters (AR).
+    //    This applies to both the geometry size AND the position vector relative to origin.
+    const unitsWrapper = new THREE.Group();
+    unitsWrapper.scale.setScalar(0.001); 
+    unitsWrapper.add(modelClone);
+
+    // 2. Orientation Wrapper:
+    //    The viewer uses a Z-up coordinate system (camera.up = [0,0,1]).
+    //    Standard AR/glTF is Y-up.
+    //    We rotate -90 degrees around X to map Z-up data onto the Y-up world.
+    const orientationWrapper = new THREE.Group();
+    orientationWrapper.rotation.x = -Math.PI / 2;
+    orientationWrapper.add(unitsWrapper);
+    
+    // Update matrices before export to ensure transforms are baked correctly into the hierarchy
+    orientationWrapper.updateMatrixWorld(true);
 
     exporter.parse(
-        arScene,
+        orientationWrapper,
         (gltf) => {
             if (gltf instanceof ArrayBuffer) {
                 const blob = new Blob([gltf], { type: 'application/octet-stream' });

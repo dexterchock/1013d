@@ -46,15 +46,6 @@ const MagnetIcon = () => (
       <path d="M6 6h12" />
     </svg>
 );
-const ARIcon = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 7V4h3" />
-      <path d="M20 7V4h-3" />
-      <path d="M4 17v3h3" />
-      <path d="M20 17v3h-3" />
-      <path d="M12 7l-5 3v6l5 3 5-3v-6z" />
-    </svg>
-);
 
 const NumberInput: React.FC<{ 
     label: string; 
@@ -705,7 +696,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     title="View in AR"
                     aria-label="View Augmented Reality"
                 >
-                    <ARIcon />
+                    <span className="text-xs font-bold tracking-wider">AR</span>
                 </button>
             </div>
 
