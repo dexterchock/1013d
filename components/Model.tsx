@@ -3,6 +3,7 @@ import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import { TransformControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
@@ -157,6 +158,10 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
   const rotationSnap = useStore((state) => state.rotationSnap);
   const selectModel = useStore((state) => state.selectModel);
   const updateModelTransform = useStore((state) => state.updateModelTransform);
+  
+  // AR STATE
+  const arGenerationRequest = useStore((state) => state.arGenerationRequest);
+  const setArModelUrl = useStore((state) => state.setArModelUrl);
 
   const [group, setGroup] = useState<THREE.Group | null>(null);
 
@@ -164,6 +169,52 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     e.stopPropagation(); 
     selectModel(modelData.id);
   };
+
+  // --- AR EXPORT LOGIC ---
+  useEffect(() => {
+    if (!arGenerationRequest || !isSelected || !group) return;
+
+    // The timestamp changed, meaning a new request came in for the *selected* model.
+    const exporter = new GLTFExporter();
+    
+    // Clone the current model state (geometry + materials + current local transforms)
+    const modelClone = group.clone();
+    
+    // --- WRAPPER HIERARCHY ---
+    // 1. Units Wrapper: 
+    //    Scales everything by 0.001 to convert millimeters (Viewer) to meters (AR).
+    //    This applies to both the geometry size AND the position vector relative to origin.
+    const unitsWrapper = new THREE.Group();
+    unitsWrapper.scale.setScalar(0.001); 
+    unitsWrapper.add(modelClone);
+
+    // 2. Orientation Wrapper:
+    //    The viewer uses a Z-up coordinate system (camera.up = [0,0,1]).
+    //    Standard AR/glTF is Y-up.
+    //    We rotate -90 degrees around X to map Z-up data onto the Y-up world.
+    const orientationWrapper = new THREE.Group();
+    orientationWrapper.rotation.x = -Math.PI / 2;
+    orientationWrapper.add(unitsWrapper);
+    
+    // Update matrices before export to ensure transforms are baked correctly into the hierarchy
+    orientationWrapper.updateMatrixWorld(true);
+
+    exporter.parse(
+        orientationWrapper,
+        (gltf) => {
+            if (gltf instanceof ArrayBuffer) {
+                const blob = new Blob([gltf], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                setArModelUrl(url);
+            }
+        },
+        (error) => {
+            console.error('An error happened during GLTF export:', error);
+        },
+        { binary: true } // Create .glb
+    );
+
+  }, [arGenerationRequest]); // Only trigger when the timestamp updates
 
   return (
     <>

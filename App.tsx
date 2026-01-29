@@ -5,12 +5,29 @@ import { AuraEffect } from './components/AuraEffect';
 import { CalibrationModal } from './components/CalibrationModal';
 import { CameraControls } from '@react-three/drei';
 import { useStore } from './store';
+// Import model-viewer for the web component side-effects
+import '@google/model-viewer';
+
+// Declare intrinsic elements for TypeScript to recognize <model-viewer>
+// Use module augmentation for 'react' to ensure it merges correctly with existing JSX types
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': any;
+    }
+  }
+}
 
 function App() {
   const controlsRef = useRef<CameraControls>(null);
   const [isMounted, setIsMounted] = useState(false);
   const addModels = useStore((state) => state.addModels);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // AR Refs and State
+  const modelViewerRef = useRef<any>(null); // Type 'any' to access custom methods like activateAR
+  const arModelUrl = useStore((state) => state.arModelUrl);
+  const setArSupported = useStore((state) => state.setArSupported);
 
   useEffect(() => {
     // Slight delay ensures the browser has painted the initial frame of the UI 
@@ -53,6 +70,57 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  // --- AR Logic ---
+  useEffect(() => {
+    const checkSupport = async () => {
+        let supported = false;
+
+        // 1. iOS Quick Look check (Anchor rel="ar")
+        const a = document.createElement('a');
+        if (a.relList && a.relList.supports && a.relList.supports('ar')) {
+            supported = true;
+        } 
+        // 2. WebXR check (Android/Headsets)
+        else if ('xr' in navigator && (navigator as any).xr) {
+             try {
+                 supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+             } catch (e) { 
+                 // Fallback to false if check fails
+             }
+        }
+        
+        // 3. Android Intent fallback
+        // If WebXR check fails or isn't present, check for Android user agent as a proxy for Scene Viewer support
+        if (!supported && /Android/i.test(navigator.userAgent)) {
+            supported = true;
+        }
+
+        setArSupported(supported);
+    };
+
+    checkSupport();
+  }, [setArSupported]);
+
+  // Activate AR when a new URL is generated
+  useEffect(() => {
+      if (arModelUrl && modelViewerRef.current) {
+          // Setting the src triggers a load. We wait for load to activate AR.
+          const mv = modelViewerRef.current;
+          
+          const handleLoad = () => {
+              // Now that a model is loaded, canActivateAR should technically be true if supported
+              // We try to activate regardless, letting model-viewer handle the specific API call
+              if (mv.activateAR) {
+                  mv.activateAR();
+              }
+              // Clean up listener to prevent double triggering
+              mv.removeEventListener('load', handleLoad);
+          };
+
+          mv.addEventListener('load', handleLoad);
+      }
+  }, [arModelUrl]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -131,6 +199,19 @@ function App() {
             ${isMounted ? 'opacity-0' : 'opacity-100'}
         `}
       />
+
+      {/* Hidden Model Viewer for AR capabilities */}
+      {/* We apply style to hide it but keep it in DOM. 
+          ar-modes="webxr scene-viewer quick-look" prefers WebXR > Android Scene Viewer > iOS Quick Look */}
+      <model-viewer
+        ref={modelViewerRef}
+        src={arModelUrl || undefined}
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        camera-controls
+        style={{ display: 'block', width: '0px', height: '0px', position: 'absolute', top: 0, left: 0, pointerEvents: 'none', visibility: 'hidden' }}
+      ></model-viewer>
+
     </main>
   );
 }

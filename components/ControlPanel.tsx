@@ -389,6 +389,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     apply1to1Scale(controlsRef.current, store.ppi);
   };
 
+  const handleAR = () => {
+      store.triggerArGeneration();
+  };
+
   const calculatePPI = () => {
     if (resolutionWidth && resolutionHeight && diagonalInches) {
       const diagonalPixels = Math.sqrt(resolutionWidth * resolutionWidth + resolutionHeight * resolutionHeight);
@@ -400,6 +404,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Visual state
   const showModelTools = !!store.selectedModelId;
   const showSnap = showModelTools && store.gizmoMode === 'rotate';
+  // Show AR button only if a model is selected AND the device supports AR
+  const showAR = showModelTools && store.isArSupported;
+  
   const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
   return (
@@ -467,7 +474,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 {/* About Section */}
                 <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
                     <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
-                        <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
+                        <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display PPI or card calibration.</p>
                         <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                             <span>
@@ -676,6 +683,21 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <MagnetIcon />
                      </button>
                 </div>
+            </div>
+
+            {/* AR Button */}
+            <div className={`
+                overflow-hidden transition-all duration-500 ${easingClass}
+                ${showAR ? 'max-w-[3rem] opacity-100 border-r border-white/10' : 'max-w-0 opacity-0 border-r-0'}
+            `}>
+                <button
+                    onClick={handleAR}
+                    className="h-10 w-12 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                    title="View in AR"
+                    aria-label="View Augmented Reality"
+                >
+                    <span className="text-xs font-bold tracking-wider">AR</span>
+                </button>
             </div>
 
             {/* 1:1 Button - End Cap */}
