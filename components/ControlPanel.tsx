@@ -474,7 +474,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 {/* About Section */}
                 <div className={`overflow-hidden transition-all duration-500 ${easingClass} ${showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'}`}>
                     <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
-                        <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display resolution or card calibration.</p>
+                        <p className="mb-2">A 3D viewer to inspect and scale models in true 1:1 dimensions using display ppi or card calibration.</p>
                         <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                             <span>
