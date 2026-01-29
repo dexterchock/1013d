@@ -46,6 +46,15 @@ const MagnetIcon = () => (
       <path d="M6 6h12" />
     </svg>
 );
+const ARIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7V4h3" />
+      <path d="M20 7V4h-3" />
+      <path d="M4 17v3h3" />
+      <path d="M20 17v3h-3" />
+      <path d="M12 7l-5 3v6l5 3 5-3v-6z" />
+    </svg>
+);
 
 const NumberInput: React.FC<{ 
     label: string; 
@@ -389,6 +398,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     apply1to1Scale(controlsRef.current, store.ppi);
   };
 
+  const handleAR = () => {
+      store.triggerArGeneration();
+  };
+
   const calculatePPI = () => {
     if (resolutionWidth && resolutionHeight && diagonalInches) {
       const diagonalPixels = Math.sqrt(resolutionWidth * resolutionWidth + resolutionHeight * resolutionHeight);
@@ -400,6 +413,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   // Visual state
   const showModelTools = !!store.selectedModelId;
   const showSnap = showModelTools && store.gizmoMode === 'rotate';
+  // Show AR button only if a model is selected AND the device supports AR
+  const showAR = showModelTools && store.isArSupported;
+  
   const easingClass = "ease-[cubic-bezier(0.32,0.72,0,1)]";
 
   return (
@@ -676,6 +692,21 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         <MagnetIcon />
                      </button>
                 </div>
+            </div>
+
+            {/* AR Button */}
+            <div className={`
+                overflow-hidden transition-all duration-500 ${easingClass}
+                ${showAR ? 'max-w-[3rem] opacity-100 border-r border-white/10' : 'max-w-0 opacity-0 border-r-0'}
+            `}>
+                <button
+                    onClick={handleAR}
+                    className="h-10 w-12 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                    title="View in AR"
+                    aria-label="View Augmented Reality"
+                >
+                    <ARIcon />
+                </button>
             </div>
 
             {/* 1:1 Button - End Cap */}

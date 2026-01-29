@@ -104,14 +104,14 @@ const SceneContent: React.FC<{
         ref={(node) => {
           controlsRef.current = node;
           if (node) {
+             node.minZoom = 0.01;
+             node.maxZoom = 5000;
              node.mouseButtons.middle = ACTION.TRUCK as any;
              node.mouseButtons.right = ACTION.TRUCK as any;
              onMountControls(node);
           }
         }}
         makeDefault 
-        minZoom={0.01}
-        maxZoom={5000}
         dollyToCursor={true} 
         onChange={check1to1Scale}
       />

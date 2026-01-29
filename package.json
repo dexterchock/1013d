@@ -14,7 +14,8 @@
     "three": "^0.160.0",
     "@react-three/fiber": "^8.15.11",
     "@react-three/drei": "^9.88.11",
-    "zustand": "^4.4.6"
+    "zustand": "^4.4.6",
+    "@google/model-viewer": "^3.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

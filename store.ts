@@ -53,7 +53,16 @@ const calculatePositions = (
 
 // --- Store Implementation ---
 
-export const useStore = create<ViewerState>()(
+interface ArState {
+    isArSupported: boolean;
+    arGenerationRequest: number | null; // Timestamp to trigger generation
+    arModelUrl: string | null; // The blob URL
+    setArSupported: (supported: boolean) => void;
+    triggerArGeneration: () => void;
+    setArModelUrl: (url: string | null) => void;
+}
+
+export const useStore = create<ViewerState & ArState>()(
   persist(
     (set, get) => ({
       // Initial State
@@ -67,6 +76,11 @@ export const useStore = create<ViewerState>()(
       is1to1Mode: false,
       isCalibrationModalOpen: false,
       
+      // AR State
+      isArSupported: false,
+      arGenerationRequest: null,
+      arModelUrl: null,
+
       calibrationSettings: {
           resolutionWidth: window.screen.width,
           resolutionHeight: window.screen.height,
@@ -225,7 +239,12 @@ export const useStore = create<ViewerState>()(
               }
               return updates;
           });
-      }
+      },
+
+      // AR Actions
+      setArSupported: (supported) => set({ isArSupported: supported }),
+      triggerArGeneration: () => set({ arGenerationRequest: Date.now() }),
+      setArModelUrl: (url) => set({ arModelUrl: url }),
     }),
     {
       name: '1to13d-storage', 

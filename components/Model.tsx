@@ -3,6 +3,7 @@ import { useLoader, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import { TransformControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
@@ -157,6 +158,10 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
   const rotationSnap = useStore((state) => state.rotationSnap);
   const selectModel = useStore((state) => state.selectModel);
   const updateModelTransform = useStore((state) => state.updateModelTransform);
+  
+  // AR STATE
+  const arGenerationRequest = useStore((state) => state.arGenerationRequest);
+  const setArModelUrl = useStore((state) => state.setArModelUrl);
 
   const [group, setGroup] = useState<THREE.Group | null>(null);
 
@@ -164,6 +169,42 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     e.stopPropagation(); 
     selectModel(modelData.id);
   };
+
+  // --- AR EXPORT LOGIC ---
+  useEffect(() => {
+    if (!arGenerationRequest || !isSelected || !group) return;
+
+    // The timestamp changed, meaning a new request came in for the *selected* model.
+    const exporter = new GLTFExporter();
+    
+    // We clone the group so we can prepare it for AR without affecting the scene.
+    // However, in this Viewer, 'scale' is often used to resize dimensions (1mm = 1 unit).
+    // AR Quick Look expects 1 unit = 1 meter usually, OR standard glTF units.
+    // Three.js and model-viewer usually agree that 1 unit = 1 meter.
+    // But our viewer treats 1 unit = 1mm (implied by the 1:1 math using PPI).
+    // So we need to scale the exported model down by 0.001 to convert mm to meters for AR.
+    const arScene = group.clone();
+    
+    // Convert Viewer Space (mm) to AR Space (meters)
+    arScene.scale.multiplyScalar(0.001);
+    arScene.updateMatrixWorld(true);
+
+    exporter.parse(
+        arScene,
+        (gltf) => {
+            if (gltf instanceof ArrayBuffer) {
+                const blob = new Blob([gltf], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                setArModelUrl(url);
+            }
+        },
+        (error) => {
+            console.error('An error happened during GLTF export:', error);
+        },
+        { binary: true } // Create .glb
+    );
+
+  }, [arGenerationRequest]); // Only trigger when the timestamp updates
 
   return (
     <>
