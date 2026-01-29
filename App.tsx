@@ -73,22 +73,33 @@ function App() {
 
   // --- AR Logic ---
   useEffect(() => {
-    const mv = modelViewerRef.current;
-    if (mv) {
-        // Check AR availability on mount
-        const checkAr = () => {
-            // canActivateAR is a property on the element instance
-            setArSupported(mv.canActivateAR);
-        };
-        
-        // Wait a tick for the element to initialize or listen to event
-        if (mv.canActivateAR !== undefined) {
-            checkAr();
-        } else {
-            // Fallback: wait for load or error (some browsers might be slow to report capabilities)
-            mv.addEventListener('load', checkAr);
+    const checkSupport = async () => {
+        let supported = false;
+
+        // 1. iOS Quick Look check (Anchor rel="ar")
+        const a = document.createElement('a');
+        if (a.relList && a.relList.supports && a.relList.supports('ar')) {
+            supported = true;
+        } 
+        // 2. WebXR check (Android/Headsets)
+        else if ('xr' in navigator && (navigator as any).xr) {
+             try {
+                 supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+             } catch (e) { 
+                 // Fallback to false if check fails
+             }
         }
-    }
+        
+        // 3. Android Intent fallback
+        // If WebXR check fails or isn't present, check for Android user agent as a proxy for Scene Viewer support
+        if (!supported && /Android/i.test(navigator.userAgent)) {
+            supported = true;
+        }
+
+        setArSupported(supported);
+    };
+
+    checkSupport();
   }, [setArSupported]);
 
   // Activate AR when a new URL is generated
@@ -98,7 +109,9 @@ function App() {
           const mv = modelViewerRef.current;
           
           const handleLoad = () => {
-              if (mv.canActivateAR) {
+              // Now that a model is loaded, canActivateAR should technically be true if supported
+              // We try to activate regardless, letting model-viewer handle the specific API call
+              if (mv.activateAR) {
                   mv.activateAR();
               }
               // Clean up listener to prevent double triggering
