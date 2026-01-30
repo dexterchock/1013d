@@ -2,6 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <title>1013D | 1:1 Scale 3D Visualization & AR Viewer</title>
+    <meta name="application-name" content="1013D" />
+    <meta name="apple-mobile-web-app-title" content="1013D" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="author" content="Dexter Chock" />
     <meta name="robots" content="index, follow" />
@@ -9,11 +13,8 @@
     <meta name="yandex-verification" content="56e17f27a2d40416" />
 
     <link rel="me" href="https://www.instagram.com/dexterchock" />
-    
     <link rel="canonical" href="https://1013d.pages.dev/" />
 
-    <title>1013D | 1:1 Scale 3D Visualization & AR Viewer</title>
-    
     <meta name="description" content="The standard for browser-based 1:1 scale calibration. Visualize STL, OBJ, and 3MF files at exact physical dimensions on your screen, or project them into the real world with instant Augmented Reality (AR)." />
     
     <meta name="keywords" content="1:1 scale algorithm, webgl physical scale, precise stl viewer, ppi calculation matrix, iso 7810 calibration, dexter chock, 3d print validation, AR 3d viewer, view stl in ar, augmented reality 3d printing, ios ar quick look, android scene viewer" />
@@ -35,7 +36,6 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="1013D" />
     <link rel="manifest" href="/manifest.json" />
     
     <meta name="theme-color" content="#050505" />
@@ -44,6 +44,12 @@
 
     <script type="application/ld+json">
     [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "1013D",
+        "url": "https://1013d.pages.dev/"
+      },
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
@@ -62,7 +68,9 @@
     
     </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+        <h1 style="display:none;">1013D</h1>
+    </div>
 
     <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
       <defs>
@@ -85,5 +93,6 @@
 
     <script type="module" src="/index.tsx"></script>
 
-    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5b09c717ec08483d9ed9a6cf43e2a1a6"}'></script></body>
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5b09c717ec08483d9ed9a6cf43e2a1a6"}'></script>
+  </body>
 </html>
