@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024"><svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#050505"></rect>
+  <path d="M244.05 221.09L389.50 221.09L389.50 802.91L231.55 802.91L231.55 366.55L228.14 366.55L100.86 442.68L100.86 308.59L244.05 221.09Z" fill="#FFFFFF"></path>
+  <path d="M633.36 802.91L633.36 802.91L409.50 802.91L409.50 221.09L631.09 221.09Q720.86 221.09 786.35 255.89Q851.83 290.69 887.48 355.89Q923.14 421.09 923.14 512L923.14 512Q923.14 602.91 887.63 668.11Q852.11 733.31 787.06 768.11Q722 802.91 633.36 802.91ZM567.45 355.18L567.45 668.82L627.68 668.82Q670.86 668.82 701.40 654.90Q731.94 640.98 747.99 606.89Q764.05 572.80 764.05 512L764.05 512Q764.05 451.20 747.71 417.11Q731.38 383.02 699.98 369.10Q668.59 355.18 623.14 355.18L623.14 355.18L567.45 355.18Z" fill="#3B82F6"></path>
+</svg></svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>
