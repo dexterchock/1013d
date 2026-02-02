@@ -4,7 +4,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
-import { TransformControls } from '@react-three/drei';
+import { TransformControls, Bvh } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
@@ -36,6 +36,15 @@ const SceneProcessor: React.FC<{
 }> = ({ scene, modelId, color, isNativeYUp }) => {
     const { updateModelDimensions } = useStore();
 
+    // PERFORMANCE: Shared Material
+    // Create one material instance per model color instead of one per mesh.
+    const sharedMaterial = useMemo(() => new THREE.MeshStandardMaterial({ 
+        color: color, 
+        roughness: 0.5, 
+        metalness: 0.1,
+        envMapIntensity: 1.0 
+    }), [color]);
+
     useEffect(() => {
         // --- DRIFT FIX ---
         // Immediately reset transforms to prevent cumulative drift on re-renders.
@@ -45,7 +54,7 @@ const SceneProcessor: React.FC<{
         scene.scale.set(1, 1, 1);
         scene.updateMatrixWorld(true);
 
-        // 1. Apply Color & Material
+        // 1. Apply Color & Material & Aggressive Disposal
         scene.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
                 const mesh = child as THREE.Mesh;
@@ -58,13 +67,24 @@ const SceneProcessor: React.FC<{
                     mesh.geometry.computeVertexNormals();
                 }
 
-                // Material Tuning
-                mesh.material = new THREE.MeshStandardMaterial({ 
-                    color: color, 
-                    roughness: 0.5, 
-                    metalness: 0.1,
-                    envMapIntensity: 1.0 
-                });
+                // PERFORMANCE: Aggressive Disposal
+                // If the mesh has existing materials (from loader), strip textures and dispose.
+                if (mesh.material) {
+                    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                    materials.forEach((mat) => {
+                        // Loop through properties to find textures and dispose them
+                        for (const key in mat) {
+                            const prop = (mat as any)[key];
+                            if (prop && (prop as any).isTexture) {
+                                (prop as any).dispose();
+                            }
+                        }
+                        mat.dispose();
+                    });
+                }
+
+                // Material Tuning - Assign shared instance
+                mesh.material = sharedMaterial;
             }
         });
 
@@ -101,9 +121,14 @@ const SceneProcessor: React.FC<{
         // 7. Report Dimensions to Store
         updateModelDimensions(modelId, size.x, size.y, size.z);
 
-    }, [scene, color, isNativeYUp, modelId, updateModelDimensions]);
+    }, [scene, sharedMaterial, isNativeYUp, modelId, updateModelDimensions]);
 
-    return <primitive object={scene} />;
+    // PERFORMANCE: Wrap in BVH for accelerated raycasting
+    return (
+        <Bvh firstHitOnly>
+            <primitive object={scene} />
+        </Bvh>
+    );
 };
 
 const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {

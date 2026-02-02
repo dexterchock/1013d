@@ -167,6 +167,7 @@ export const ViewerScene: React.FC<{
       <Canvas
         dpr={[1, 2]}
         orthographic
+        frameloop="demand"
         // Shadows disabled
         style={{ touchAction: 'none' }}
         camera={{
