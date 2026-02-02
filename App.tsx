@@ -1,12 +1,15 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { ViewerScene } from './components/ViewerScene';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { Overlay } from './components/ControlPanel';
 import { AuraEffect } from './components/AuraEffect';
 import { CalibrationModal } from './components/CalibrationModal';
-import { CameraControls } from '@react-three/drei';
+import type { CameraControls } from '@react-three/drei';
 import { useStore } from './store';
-// Import model-viewer for the web component side-effects
-import '@google/model-viewer';
+
+// Lazy load the heavy 3D scene
+// This puts Three.js, R3F, and the canvas in a separate chunk
+const ViewerScene = React.lazy(() => 
+  import('./components/ViewerScene').then(module => ({ default: module.ViewerScene }))
+);
 
 // Declare intrinsic elements for TypeScript to recognize <model-viewer>
 // Use module augmentation for 'react' to ensure it merges correctly with existing JSX types
@@ -30,6 +33,11 @@ function App() {
   const setArSupported = useStore((state) => state.setArSupported);
 
   useEffect(() => {
+    // Dynamically import @google/model-viewer to avoid blocking the main thread on initial load
+    import('@google/model-viewer').catch(e => {
+        console.warn("Failed to load @google/model-viewer", e);
+    });
+
     // Slight delay ensures the browser has painted the initial frame of the UI 
     // behind the curtain before we lift it.
     const t = setTimeout(() => setIsMounted(true), 100);
@@ -175,8 +183,10 @@ function App() {
         </div>
       </div>
 
-      {/* 3D Scene */}
-      <ViewerScene controlsRef={controlsRef} />
+      {/* 3D Scene - Suspended for Lazy Loading */}
+      <Suspense fallback={null}>
+        <ViewerScene controlsRef={controlsRef} />
+      </Suspense>
 
       {/* UI Overlay */}
       <Overlay controlsRef={controlsRef} />
