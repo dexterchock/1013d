@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CameraControls } from '@react-three/drei';
+import type { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer, LiquidButton } from './LiquidContainer';
 import { transitionToAxis, apply1to1Scale } from '../utils/viewUtils';
-import * as THREE from 'three';
+import { MathUtils } from 'three';
 import { LoadedModel } from '../types';
 import { AnimatedLogo } from './AnimatedLogo';
 
@@ -169,7 +169,7 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     const updateTransform = (type: 'position' | 'rotation' | 'scale', axis: 'x' | 'y' | 'z', value: number) => {
         let finalValue = value;
         if (type === 'rotation') {
-            finalValue = THREE.MathUtils.degToRad(value);
+            finalValue = MathUtils.degToRad(value);
         }
         
         const currentPos = store.modelPositions[model.id] || {x:0, y:0, z:0};
@@ -244,9 +244,9 @@ const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                             <div>
                                 <span className="text-[9px] text-white/30 uppercase mb-1 block">Rotation (deg)</span>
                                 <div className="grid grid-cols-3 gap-1">
-                                    <NumberInput id={`rot-x-${model.id}`} label="X" value={Math.round(THREE.MathUtils.radToDeg(rot.x))} onChange={(v) => updateTransform('rotation', 'x', v)} />
-                                    <NumberInput id={`rot-y-${model.id}`} label="Y" value={Math.round(THREE.MathUtils.radToDeg(rot.y))} onChange={(v) => updateTransform('rotation', 'y', v)} />
-                                    <NumberInput id={`rot-z-${model.id}`} label="Z" value={Math.round(THREE.MathUtils.radToDeg(rot.z))} onChange={(v) => updateTransform('rotation', 'z', v)} />
+                                    <NumberInput id={`rot-x-${model.id}`} label="X" value={Math.round(MathUtils.radToDeg(rot.x))} onChange={(v) => updateTransform('rotation', 'x', v)} />
+                                    <NumberInput id={`rot-y-${model.id}`} label="Y" value={Math.round(MathUtils.radToDeg(rot.y))} onChange={(v) => updateTransform('rotation', 'y', v)} />
+                                    <NumberInput id={`rot-z-${model.id}`} label="Z" value={Math.round(MathUtils.radToDeg(rot.z))} onChange={(v) => updateTransform('rotation', 'z', v)} />
                                 </div>
                             </div>
 

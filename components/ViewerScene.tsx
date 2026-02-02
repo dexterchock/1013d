@@ -1,7 +1,12 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { CameraControls, Environment, Grid, Text } from '@react-three/drei';
-import * as THREE from 'three';
+import { 
+  MathUtils, 
+  PerspectiveCamera, 
+  OrthographicCamera, 
+  ACESFilmicToneMapping
+} from 'three';
 import { useStore } from '../store';
 import { ModelWrapper } from './Model';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -99,16 +104,16 @@ const SceneContent: React.FC<{
     let isMatch = false;
     
     if (controls.camera.type === 'PerspectiveCamera') {
-        const cam = controls.camera as THREE.PerspectiveCamera;
+        const cam = controls.camera as PerspectiveCamera;
         if (cam.fov) {
             // Recalculating FOV math here is cheap, window.innerHeight is fast access
-            const fovRad = THREE.MathUtils.degToRad(cam.fov);
+            const fovRad = MathUtils.degToRad(cam.fov);
             // Use cached ppm
             const idealDist = (window.innerHeight / ppm) / (2 * Math.tan(fovRad / 2));
             if (idealDist > 0) isMatch = (Math.abs(controls.distance - idealDist) / idealDist) < tolerance;
         }
     } else if (controls.camera.type === 'OrthographicCamera') {
-        const cam = controls.camera as THREE.OrthographicCamera;
+        const cam = controls.camera as OrthographicCamera;
         if (cam.zoom) {
             isMatch = Math.abs(cam.zoom - ppm) / ppm < tolerance;
         }
@@ -271,7 +276,7 @@ export const ViewerScene: React.FC<{
         gl={{ 
             preserveDrawingBuffer: true, 
             antialias: true, 
-            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMapping: ACESFilmicToneMapping,
             toneMappingExposure: 1.0, 
             precision: 'highp',
             powerPreference: 'high-performance',

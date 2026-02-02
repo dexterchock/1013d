@@ -5,7 +5,16 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
 import { TransformControls, Bvh } from '@react-three/drei';
-import * as THREE from 'three';
+import { 
+  MeshStandardMaterial, 
+  FrontSide, 
+  Object3D, 
+  Group, 
+  Mesh, 
+  Box3, 
+  Vector3,
+  MathUtils
+} from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
@@ -29,7 +38,7 @@ interface ModelWrapperProps {
 
 // Internal component to handle scene processing and bounds reporting
 const SceneProcessor: React.FC<{ 
-    scene: THREE.Object3D | THREE.Group | THREE.Mesh; 
+    scene: Object3D | Group | Mesh; 
     modelId: string; 
     color: string;
     isNativeYUp: boolean;
@@ -39,12 +48,12 @@ const SceneProcessor: React.FC<{
     // PERFORMANCE: Shared Material
     // Create one material instance per model color instead of one per mesh.
     // OPTIMIZATION: Enforce FrontSide (Single-Side Rendering) to cull backfaces.
-    const sharedMaterial = useMemo(() => new THREE.MeshStandardMaterial({ 
+    const sharedMaterial = useMemo(() => new MeshStandardMaterial({ 
         color: color, 
         roughness: 0.5, 
         metalness: 0.1,
         envMapIntensity: 1.0,
-        side: THREE.FrontSide 
+        side: FrontSide 
     }), [color]);
 
     useEffect(() => {
@@ -58,8 +67,8 @@ const SceneProcessor: React.FC<{
 
         // 1. Apply Color & Material & Aggressive Disposal
         scene.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-                const mesh = child as THREE.Mesh;
+            if ((child as Mesh).isMesh) {
+                const mesh = child as Mesh;
                 // Shadows removed
                 mesh.castShadow = false;
                 mesh.receiveShadow = false;
@@ -99,10 +108,10 @@ const SceneProcessor: React.FC<{
         scene.updateMatrixWorld(true);
 
         // 4. Calculate Bounding Box
-        const box = new THREE.Box3().setFromObject(scene);
-        const center = new THREE.Vector3();
+        const box = new Box3().setFromObject(scene);
+        const center = new Vector3();
         box.getCenter(center);
-        const size = new THREE.Vector3();
+        const size = new Vector3();
         box.getSize(size);
 
         // 5. FIX: Convert World Center to Local Center
@@ -141,7 +150,7 @@ const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, 
 
 const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
   const geom = useLoader(STLLoader, url);
-  const mesh = useMemo(() => new THREE.Mesh(geom), [geom]);
+  const mesh = useMemo(() => new Mesh(geom), [geom]);
   return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
 };
 
@@ -190,7 +199,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
   const arGenerationRequest = useStore((state) => state.arGenerationRequest);
   const setArModelUrl = useStore((state) => state.setArModelUrl);
 
-  const [group, setGroup] = useState<THREE.Group | null>(null);
+  const [group, setGroup] = useState<Group | null>(null);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation(); 
@@ -211,7 +220,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     // 1. Units Wrapper: 
     //    Scales everything by 0.001 to convert millimeters (Viewer) to meters (AR).
     //    This applies to both the geometry size AND the position vector relative to origin.
-    const unitsWrapper = new THREE.Group();
+    const unitsWrapper = new Group();
     unitsWrapper.scale.setScalar(0.001); 
     unitsWrapper.add(modelClone);
 
@@ -219,7 +228,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) 
     //    The viewer uses a Z-up coordinate system (camera.up = [0,0,1]).
     //    Standard AR/glTF is Y-up.
     //    We rotate -90 degrees around X to map Z-up data onto the Y-up world.
-    const orientationWrapper = new THREE.Group();
+    const orientationWrapper = new Group();
     orientationWrapper.rotation.x = -Math.PI / 2;
     orientationWrapper.add(unitsWrapper);
     
