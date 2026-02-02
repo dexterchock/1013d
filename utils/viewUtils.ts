@@ -1,10 +1,10 @@
-import { CameraControls } from '@react-three/drei';
+import type { CameraControls } from '@react-three/drei';
 import { Axis } from '../types';
-import * as THREE from 'three';
+import { Vector3, MathUtils, PerspectiveCamera, OrthographicCamera } from 'three';
 
 // Helper to determine if we are currently looking roughly at an axis
 const getApproximateAxis = (controls: CameraControls): Axis | null => {
-  const pos = controls.getPosition(new THREE.Vector3());
+  const pos = controls.getPosition(new Vector3());
   const maxComp = Math.max(Math.abs(pos.x), Math.abs(pos.y), Math.abs(pos.z));
   
   if (Math.abs(pos.x) === maxComp) return pos.x > 0 ? 'X' : '-X';
@@ -24,7 +24,7 @@ export const transitionToAxis = (controls: CameraControls | null, axisBase: 'X' 
     targetAxis = `-${axisBase}` as Axis;
   }
 
-  const pos = new THREE.Vector3();
+  const pos = new Vector3();
   // Z-UP Logic
   switch (targetAxis) {
     case 'X': pos.set(distance, 0, 0); break;    // Right View
@@ -56,7 +56,7 @@ export const apply1to1Scale = (
     controls.zoomTo(PPM, true);
   } else {
     // Perspective: Distance controls scale.
-    const cam = camera as THREE.PerspectiveCamera;
+    const cam = camera as PerspectiveCamera;
     
     // Safety check for FOV to avoid division by zero or NaN
     if (!cam.fov) return; 
@@ -78,16 +78,16 @@ export const getVisibleHeightAtTarget = (controls: CameraControls, canvasHeight:
   if (!camera) return 0;
 
   if (camera.type === 'PerspectiveCamera') {
-    const persp = camera as THREE.PerspectiveCamera;
+    const persp = camera as PerspectiveCamera;
     const dist = controls.distance; 
     // Ensure FOV is valid
     if (!persp.fov) return 0;
     
-    const fovRad = THREE.MathUtils.degToRad(persp.fov);
+    const fovRad = MathUtils.degToRad(persp.fov);
     return 2 * dist * Math.tan(fovRad / 2);
 
   } else if (camera.type === 'OrthographicCamera') {
-    const ortho = camera as THREE.OrthographicCamera;
+    const ortho = camera as OrthographicCamera;
     // Prevent division by zero if zoom is somehow 0
     if (!ortho.zoom) return 0;
     return canvasHeight / ortho.zoom;
@@ -100,10 +100,10 @@ export const setVisibleHeightAtTarget = (controls: CameraControls, visibleHeight
   if (!camera || visibleHeight <= 0 || canvasHeight <= 0) return;
 
   if (camera.type === 'PerspectiveCamera') {
-    const persp = camera as THREE.PerspectiveCamera;
+    const persp = camera as PerspectiveCamera;
     if (!persp.fov) return;
 
-    const fovRad = THREE.MathUtils.degToRad(persp.fov);
+    const fovRad = MathUtils.degToRad(persp.fov);
     const targetDist = visibleHeight / (2 * Math.tan(fovRad / 2));
     
     // Check for Infinity/NaN before applying
