@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { CameraControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
@@ -42,6 +42,7 @@ const SceneContent: React.FC<{
 }> = ({ onMountControls }) => {
   const controlsRef = useRef<CameraControls>(null);
   const lastCheckTime = useRef(0);
+  const { invalidate } = useThree();
   
   const models = useStore((state) => state.models);
   const isGridVisible = useStore((state) => state.isGridVisible);
@@ -108,12 +109,45 @@ const SceneContent: React.FC<{
              node.maxZoom = 5000;
              node.mouseButtons.middle = ACTION.TRUCK as any;
              node.mouseButtons.right = ACTION.TRUCK as any;
+             
+             // --- Demand Loop Patch ---
+             // Monkey-patch transition methods to ensure frame loop is kept alive
+             // during programmatic animations (setLookAt, dollyTo, zoomTo).
+             // Without this, frameloop="demand" causes "snapping" as the loop pauses early.
+             const methods = ['setLookAt', 'dollyTo', 'zoomTo', 'moveTo', 'rotateTo', 'truck', 'dolly', 'zoom'];
+             methods.forEach((method) => {
+                 const original = (node as any)[method];
+                 if (typeof original === 'function') {
+                     (node as any)[method] = (...args: any[]) => {
+                         const result = original.apply(node, args);
+                         // If it returns a promise (animation), keep invalidating until done
+                         if (result instanceof Promise) {
+                             const interval = setInterval(invalidate, 1000/60);
+                             result.finally(() => {
+                                 // Keep alive slightly longer to settle damping
+                                 setTimeout(() => clearInterval(interval), 200);
+                             });
+                         } else {
+                             // Immediate invalidation for synchronous updates
+                             invalidate();
+                         }
+                         return result;
+                     };
+                 }
+             });
+
              onMountControls(node);
           }
         }}
         makeDefault 
         dollyToCursor={true} 
-        onChange={check1to1Scale}
+        smoothTime={0.25} // Ensure damping is enabled
+        draggingSmoothTime={0.25}
+        onChange={(e) => {
+            // Invalidate on every change to keep demand loop running during interaction
+            invalidate();
+            check1to1Scale(); 
+        }}
       />
       
       <Environment preset="city" blur={0.8} />
