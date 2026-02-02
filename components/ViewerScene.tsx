@@ -1,9 +1,10 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { CameraControls, Environment, Grid } from '@react-three/drei';
+import { CameraControls, Environment, Grid, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { ModelWrapper } from './Model';
+import { ErrorBoundary } from './ErrorBoundary';
 
 // Augment React's JSX namespace directly to fix R3F type errors
 declare module 'react' {
@@ -35,6 +36,27 @@ const ACTION = {
   TOUCH_ZOOM_TRUCK: 12,
   TOUCH_DOLLY_OFFSET: 13,
   TOUCH_ZOOM_OFFSET: 14,
+};
+
+// Fallback component for failed models
+const ErrorFallback: React.FC<{ fileName: string }> = ({ fileName }) => {
+    return (
+        <group>
+            <mesh>
+                <boxGeometry args={[20, 20, 20]} />
+                <meshStandardMaterial color="#ff3333" wireframe />
+            </mesh>
+            <Text 
+                position={[0, 25, 0]} 
+                fontSize={5} 
+                color="#ff3333"
+                anchorX="center"
+                anchorY="middle"
+            >
+                Error: {fileName}
+            </Text>
+        </group>
+    );
 };
 
 const SceneContent: React.FC<{ 
@@ -212,9 +234,15 @@ const SceneContent: React.FC<{
       )}
 
       {models.map((model, index) => (
-        <React.Suspense key={model.id} fallback={null}>
-          <ModelWrapper modelData={model} index={index} />
-        </React.Suspense>
+        <ErrorBoundary 
+            key={model.id} 
+            fallback={<ErrorFallback fileName={model.file.name} />}
+            onError={(e) => console.warn(`Model failed to load: ${model.file.name}`, e)}
+        >
+            <React.Suspense fallback={null}>
+                <ModelWrapper modelData={model} index={index} />
+            </React.Suspense>
+        </ErrorBoundary>
       ))}
     </>
   );
