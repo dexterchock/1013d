@@ -105,30 +105,28 @@ const SceneContent: React.FC<{
         ref={(node) => {
           controlsRef.current = node;
           if (node) {
+             node.dollyToCursor = true;
              node.minZoom = 0.01;
              node.maxZoom = 5000;
              node.mouseButtons.middle = ACTION.TRUCK as any;
              node.mouseButtons.right = ACTION.TRUCK as any;
              
-             // --- Demand Loop Patch ---
+             // --- Demand Loop Patch 1: Transition Keep-Alive ---
              // Monkey-patch transition methods to ensure frame loop is kept alive
              // during programmatic animations (setLookAt, dollyTo, zoomTo).
-             // Without this, frameloop="demand" causes "snapping" as the loop pauses early.
              const methods = ['setLookAt', 'dollyTo', 'zoomTo', 'moveTo', 'rotateTo', 'truck', 'dolly', 'zoom'];
              methods.forEach((method) => {
                  const original = (node as any)[method];
                  if (typeof original === 'function') {
                      (node as any)[method] = (...args: any[]) => {
                          const result = original.apply(node, args);
-                         // If it returns a promise (animation), keep invalidating until done
                          if (result instanceof Promise) {
+                             // Force frequent invalidation during animation
                              const interval = setInterval(invalidate, 1000/60);
                              result.finally(() => {
-                                 // Keep alive slightly longer to settle damping
                                  setTimeout(() => clearInterval(interval), 200);
                              });
                          } else {
-                             // Immediate invalidation for synchronous updates
                              invalidate();
                          }
                          return result;
@@ -136,15 +134,35 @@ const SceneContent: React.FC<{
                  }
              });
 
+             // --- Demand Loop Patch 2: Clamp Delta Time ---
+             // Fix for "Sudden Snap" after idle.
+             // When demand rendering wakes up after a long pause, the first 'delta' 
+             // passed to update() can be huge (e.g. 5 seconds). This causes 
+             // damping/physics to jump immediately to the end state.
+             // We monkey-patch update() to clamp the delta to a maximum of 0.1s.
+             const originalUpdate = (node as any).update;
+             (node as any).update = (delta: number) => {
+                 // Clamp delta to max 100ms to prevent huge jumps on wake
+                 const safeDelta = Math.min(delta, 0.1); 
+                 const updated = originalUpdate.call(node, safeDelta);
+                 
+                 // If the controls updated (camera moved), we MUST invalidate 
+                 // to render the new frame. This creates a self-sustaining loop 
+                 // as long as physics/damping is active.
+                 if (updated) {
+                     invalidate();
+                 }
+                 return updated;
+             };
+
              onMountControls(node);
           }
         }}
         makeDefault 
-        dollyToCursor={true} 
-        smoothTime={0.25} // Ensure damping is enabled
+        smoothTime={0.25} 
         draggingSmoothTime={0.25}
         onChange={(e) => {
-            // Invalidate on every change to keep demand loop running during interaction
+            // Invalidate to render the frame we just changed
             invalidate();
             check1to1Scale(); 
         }}
