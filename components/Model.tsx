@@ -38,11 +38,13 @@ const SceneProcessor: React.FC<{
 
     // PERFORMANCE: Shared Material
     // Create one material instance per model color instead of one per mesh.
+    // OPTIMIZATION: Enforce FrontSide (Single-Side Rendering) to cull backfaces.
     const sharedMaterial = useMemo(() => new THREE.MeshStandardMaterial({ 
         color: color, 
         roughness: 0.5, 
         metalness: 0.1,
-        envMapIntensity: 1.0 
+        envMapIntensity: 1.0,
+        side: THREE.FrontSide 
     }), [color]);
 
     useEffect(() => {

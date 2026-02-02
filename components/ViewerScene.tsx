@@ -143,15 +143,18 @@ const SceneContent: React.FC<{
                  });
 
                  // 2. PATCH UPDATE LOOP
-                 // Fix "Sudden Snap" on wake-up.
+                 // Fix "Sudden Snap" on wake-up for ALL refresh rates (60Hz, 120Hz, 144Hz, etc.)
                  // When the loop wakes after idle, `delta` is huge (e.g., 5 seconds).
-                 // We clamp this to a single frame (~16ms) to trick the physics engine 
-                 // into thinking it's just the next frame, preserving momentum and smoothness.
+                 // We clamp this to 0.01s (10ms).
+                 // 10ms is safe because:
+                 // - On 60Hz (16.6ms frame): It moves slightly less than 1 frame. Smooth.
+                 // - On 120Hz (8.3ms frame): It moves approx 1.2 frames. Smooth.
+                 // - On 240Hz (4.1ms frame): It moves approx 2.5 frames. Still visually instantaneous.
                  const originalUpdate = (node as any).update;
                  (node as any).update = (delta: number) => {
-                     // If delta > 100ms, assume we just woke up from demand sleep.
-                     // Feed it a healthy 16ms frame instead of the huge time jump.
-                     const safeDelta = delta > 0.1 ? 0.016 : delta;
+                     // If delta > 50ms, assume we just woke up from demand sleep.
+                     // Feed it a safe 10ms step to initiate momentum without snapping.
+                     const safeDelta = delta > 0.05 ? 0.01 : delta;
                      
                      const updated = originalUpdate.call(node, safeDelta);
                      
