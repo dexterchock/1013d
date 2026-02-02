@@ -47,6 +47,10 @@ const calculatePositions = (
   return positions;
 };
 
+// --- Debounce Variables for Dimension Updates ---
+let dimensionUpdateTimer: any = null;
+let pendingDimensionUpdates: Record<string, { x: number; y: number; z: number }> = {};
+
 // --- Store Implementation ---
 
 interface ArState {
@@ -193,22 +197,34 @@ export const useStore = create<ViewerState & ArState>()(
       setCalibrationModalOpen: (isOpen) => set({ isCalibrationModalOpen: isOpen }),
 
       updateModelDimensions: (id, x, y, z) => {
-        set((state) => {
-            const current = state.modelDimensions[id];
-            if (current && Math.abs(current.x - x) < 0.1 && Math.abs(current.y - y) < 0.1) {
-                return {};
-            }
+        // Debounce Logic: 
+        // 1. Accumulate updates
+        pendingDimensionUpdates[id] = { x, y, z };
 
-            const newDimensions = {
-                ...state.modelDimensions,
-                [id]: { x, y, z }
-            };
+        // 2. Clear previous timer
+        if (dimensionUpdateTimer) clearTimeout(dimensionUpdateTimer);
 
-            return {
-                modelDimensions: newDimensions,
-                modelPositions: calculatePositions(state.models, newDimensions)
-            };
-        });
+        // 3. Set new timer (50ms buffer)
+        dimensionUpdateTimer = setTimeout(() => {
+             set((state) => {
+                 // Merge accumulated updates with current state
+                 const newDimensions = {
+                     ...state.modelDimensions,
+                     ...pendingDimensionUpdates
+                 };
+
+                 // Calculate positions based on the new aggregated set of dimensions
+                 const newPositions = calculatePositions(state.models, newDimensions);
+
+                 // Clear buffer
+                 pendingDimensionUpdates = {};
+
+                 return {
+                     modelDimensions: newDimensions,
+                     modelPositions: newPositions
+                 };
+             });
+        }, 50);
       },
 
       updateModelTransform: (id, transform) => {
