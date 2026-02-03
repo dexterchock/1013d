@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { CameraControls, Environment, Grid, Text } from '@react-three/drei';
+import { CameraControls, Environment, Grid, Text, PerformanceMonitor } from '@react-three/drei';
 import { 
   MathUtils, 
   PerspectiveCamera, 
@@ -149,6 +149,10 @@ const SceneContent: React.FC<{
              node.mouseButtons.middle = ACTION.TRUCK as any;
              node.mouseButtons.right = ACTION.TRUCK as any;
              
+             // Manually set properties that are not exposed via props in the current types
+             node.smoothTime = 0.25;
+             node.draggingSmoothTime = 0.25;
+             
              // --- DEMAND LOOP PATCHING ---
              // Only patch if we haven't already (in case of re-renders/refs)
              if (!(node as any).__patched) {
@@ -207,8 +211,6 @@ const SceneContent: React.FC<{
           }
         }}
         makeDefault 
-        smoothTime={0.25} 
-        draggingSmoothTime={0.25}
         onChange={(e) => {
             // Invalidate on user interaction to render new frames
             invalidate();
@@ -267,11 +269,13 @@ export const ViewerScene: React.FC<{
   controlsRef: React.MutableRefObject<CameraControls | null> 
 }> = ({ controlsRef }) => {
   const selectModel = useStore((state) => state.selectModel);
+  // Adaptive Performance: Start balanced at 1.5, allowing dynamic scaling between 0.5 and 2
+  const [dpr, setDpr] = useState(1.5); 
 
   return (
     <div className="w-full h-full relative bg-[#000000]">
       <Canvas
-        dpr={[1, 2]}
+        dpr={dpr}
         orthographic
         frameloop="demand"
         // Shadows disabled
@@ -293,6 +297,10 @@ export const ViewerScene: React.FC<{
         }}
         onPointerMissed={(e) => { if (e.type === 'click') selectModel(null); }}
       >
+        <PerformanceMonitor 
+            // Scale DPR between 0.5 (worst) and 2.0 (best) based on performance factor (0-1)
+            onChange={({ factor }) => setDpr(0.5 + 1.5 * factor)} 
+        />
         <SceneContent onMountControls={(ctrl) => { controlsRef.current = ctrl; }} />
       </Canvas>
     </div>
