@@ -18,8 +18,8 @@ import {
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Augment React's JSX namespace directly to fix R3F type errors
-declare module 'react' {
+// Augment global JSX namespace to fix R3F type errors
+declare global {
   namespace JSX {
     interface IntrinsicElements {
       primitive: any;

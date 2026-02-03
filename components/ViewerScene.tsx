@@ -11,8 +11,8 @@ import { useStore } from '../store';
 import { ModelWrapper } from './Model';
 import { ErrorBoundary } from './ErrorBoundary';
 
-// Augment React's JSX namespace directly to fix R3F type errors
-declare module 'react' {
+// Augment global JSX namespace to fix R3F type errors
+declare global {
   namespace JSX {
     interface IntrinsicElements {
       ambientLight: any;
@@ -69,7 +69,7 @@ const SceneContent: React.FC<{
 }> = ({ onMountControls }) => {
   const controlsRef = useRef<CameraControls>(null);
   const lastCheckTime = useRef(0);
-  const { invalidate } = useThree();
+  const { invalidate, camera, size } = useThree();
   
   const models = useStore((state) => state.models);
   const isGridVisible = useStore((state) => state.isGridVisible);
@@ -78,6 +78,20 @@ const SceneContent: React.FC<{
   
   // Optimization: Cache PPM (Pixels Per Millimeter) calculation
   const ppm = useMemo(() => ppi / 25.4, [ppi]);
+
+  // Optimization: Pre-calculate perspective factor to avoid trig in the loop
+  // idealDistance = height / (2 * tan(fov/2) * ppm)
+  // factor = 1 / (2 * tan(fov/2) * ppm)
+  const perspectiveFactor = useMemo(() => {
+    if (camera.type === 'PerspectiveCamera') {
+        const cam = camera as PerspectiveCamera;
+        if (cam.fov) {
+            const fovRad = MathUtils.degToRad(cam.fov);
+            return 1 / (2 * Math.tan(fovRad / 2) * ppm);
+        }
+    }
+    return 0;
+  }, [camera, ppm]);
 
   // Optimization: Stabilize function reference to prevent re-creation on every render
   const check1to1Scale = useCallback(() => {
@@ -103,17 +117,13 @@ const SceneContent: React.FC<{
     const tolerance = 0.015; 
     let isMatch = false;
     
-    if (controls.camera.type === 'PerspectiveCamera') {
-        const cam = controls.camera as PerspectiveCamera;
-        if (cam.fov) {
-            // Recalculating FOV math here is cheap, window.innerHeight is fast access
-            const fovRad = MathUtils.degToRad(cam.fov);
-            // Use cached ppm
-            const idealDist = (window.innerHeight / ppm) / (2 * Math.tan(fovRad / 2));
-            if (idealDist > 0) isMatch = (Math.abs(controls.distance - idealDist) / idealDist) < tolerance;
-        }
-    } else if (controls.camera.type === 'OrthographicCamera') {
-        const cam = controls.camera as OrthographicCamera;
+    if (camera.type === 'PerspectiveCamera') {
+        // Use pre-calculated factor and current canvas height
+        const idealDist = size.height * perspectiveFactor;
+        if (idealDist > 0) isMatch = (Math.abs(controls.distance - idealDist) / idealDist) < tolerance;
+    } else if (camera.type === 'OrthographicCamera') {
+        // For Ortho, zoom directly corresponds to PPM
+        const cam = camera as OrthographicCamera;
         if (cam.zoom) {
             isMatch = Math.abs(cam.zoom - ppm) / ppm < tolerance;
         }
@@ -121,7 +131,7 @@ const SceneContent: React.FC<{
     
     // Only update store if value actually changes
     if (state.is1to1Mode !== isMatch) state.set1to1Mode(isMatch);
-  }, [ppm]); // Only re-create if calibration (PPI) changes
+  }, [ppm, perspectiveFactor, size.height, camera]); // Re-create only when geometry/calibration changes
 
   // Trigger check when PPI or Modal state changes specifically
   useEffect(() => { check1to1Scale(); }, [check1to1Scale, ppi, isCalibrationModalOpen]);
