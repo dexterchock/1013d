@@ -4,7 +4,15 @@ import { Vector3, MathUtils, PerspectiveCamera, OrthographicCamera } from 'three
 
 // Helper to determine if we are currently looking roughly at an axis
 const getApproximateAxis = (controls: CameraControls): Axis | null => {
-  const pos = controls.getPosition(new Vector3());
+  const pos = new Vector3();
+  const target = new Vector3();
+  
+  controls.getPosition(pos);
+  controls.getTarget(target);
+  
+  // Calculate relative position (Eye - Target) so detection works even when panned
+  pos.sub(target);
+  
   const maxComp = Math.max(Math.abs(pos.x), Math.abs(pos.y), Math.abs(pos.z));
   
   if (Math.abs(pos.x) === maxComp) return pos.x > 0 ? 'X' : '-X';
@@ -13,7 +21,7 @@ const getApproximateAxis = (controls: CameraControls): Axis | null => {
   return null;
 };
 
-export const transitionToAxis = (controls: CameraControls | null, axisBase: 'X' | 'Y' | 'Z', distance: number = 200) => {
+export const transitionToAxis = (controls: CameraControls | null, axisBase: 'X' | 'Y' | 'Z') => {
   if (!controls) return;
 
   const currentAxis = getApproximateAxis(controls);
@@ -24,19 +32,28 @@ export const transitionToAxis = (controls: CameraControls | null, axisBase: 'X' 
     targetAxis = `-${axisBase}` as Axis;
   }
 
-  const pos = new Vector3();
+  // 1. Capture current state
+  const currentTarget = new Vector3();
+  controls.getTarget(currentTarget); // Get the point we are currently orbiting
+  const dist = controls.distance;    // Keep the current zoom distance
+
+  // 2. Calculate offset vector based on desired axis
+  const offset = new Vector3();
   // Z-UP Logic
   switch (targetAxis) {
-    case 'X': pos.set(distance, 0, 0); break;    // Right View
-    case '-X': pos.set(-distance, 0, 0); break;  // Left View
-    case 'Y': pos.set(0, distance, 0); break;    // Back View
-    case '-Y': pos.set(0, -distance, 0); break;  // Front View
-    case 'Z': pos.set(0, 0, distance); break;    // Top View
-    case '-Z': pos.set(0, 0, -distance); break;  // Bottom View
+    case 'X': offset.set(dist, 0, 0); break;    // Right View
+    case '-X': offset.set(-dist, 0, 0); break;  // Left View
+    case 'Y': offset.set(0, dist, 0); break;    // Back View
+    case '-Y': offset.set(0, -dist, 0); break;  // Front View
+    case 'Z': offset.set(0, 0, dist); break;    // Top View
+    case '-Z': offset.set(0, 0, -dist); break;  // Bottom View
   }
 
-  // Smooth transition
-  controls.setLookAt(pos.x, pos.y, pos.z, 0, 0, 0, true);
+  // 3. Calculate new camera position relative to the CURRENT target
+  const newEye = currentTarget.clone().add(offset);
+
+  // 4. Move camera to new position, but keep looking at the SAME target
+  controls.setLookAt(newEye.x, newEye.y, newEye.z, currentTarget.x, currentTarget.y, currentTarget.z, true);
 };
 
 export const apply1to1Scale = (
