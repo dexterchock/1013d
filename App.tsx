@@ -16,7 +16,13 @@ const ViewerScene = React.lazy(() =>
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'model-viewer': any;
+      'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        src?: string | null;
+        ar?: boolean;
+        'ar-modes'?: string;
+        'camera-controls'?: boolean;
+        ref?: React.Ref<any>;
+      };
     }
   }
 }
