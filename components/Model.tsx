@@ -4,7 +4,6 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils';
 import { TransformControls, Bvh } from '@react-three/drei';
 import { 
   MeshStandardMaterial, 
@@ -14,8 +13,7 @@ import {
   Mesh, 
   Box3, 
   Vector3,
-  MathUtils,
-  BufferGeometry
+  MathUtils
 } from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
@@ -58,108 +56,88 @@ const SceneProcessor: React.FC<{
         side: FrontSide 
     }), [color]);
 
-    // OPTIMIZATION: Merge Geometries
-    // Instead of traversing and rendering thousands of meshes, we merge them into one.
-    // This dramatically reduces draw calls (CPU load).
-    const mergedMesh = useMemo(() => {
-        // 1. Reset input scene transforms to ensure world matrices are purely structural relative to root
+    useEffect(() => {
+        // --- DRIFT FIX ---
+        // Immediately reset transforms to prevent cumulative drift on re-renders.
+        // Without this, applying an offset to an already offset mesh causes it to fly away.
         scene.position.set(0, 0, 0);
         scene.rotation.set(0, 0, 0);
         scene.scale.set(1, 1, 1);
         scene.updateMatrixWorld(true);
 
-        const geometries: BufferGeometry[] = [];
-
+        // 1. Apply Color & Material & Aggressive Disposal
         scene.traverse((child) => {
             if ((child as Mesh).isMesh) {
                 const mesh = child as Mesh;
-                if (mesh.geometry) {
-                    // Clone geometry to safely mutate it (apply transform, delete attributes)
-                    const geom = mesh.geometry.clone();
-                    
-                    // Strip unused attributes to ensure compatibility for merging.
-                    // We only strictly need position and normal for this viewer.
-                    // Mismatched attributes (e.g., some meshes having UVs and others not) causes merge failures.
-                    if (geom.attributes.color) geom.deleteAttribute('color');
-                    if (geom.attributes.uv) geom.deleteAttribute('uv');
-                    if (geom.attributes.uv2) geom.deleteAttribute('uv2');
-                    if (geom.attributes.tangent) geom.deleteAttribute('tangent');
-                    
-                    // Ensure normals exist for correct lighting
-                    if (!geom.attributes.normal) geom.computeVertexNormals();
-                    
-                    // Bake the local transform (relative to the scene root) into the geometry vertices
-                    geom.applyMatrix4(mesh.matrixWorld);
-                    
-                    geometries.push(geom);
+                // Shadows removed
+                mesh.castShadow = false;
+                mesh.receiveShadow = false;
+                
+                // Ensure normals exist for correct lighting
+                if (mesh.geometry && !mesh.geometry.attributes.normal) {
+                    mesh.geometry.computeVertexNormals();
                 }
+
+                // PERFORMANCE: Aggressive Disposal
+                // If the mesh has existing materials (from loader), strip textures and dispose.
+                if (mesh.material) {
+                    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                    materials.forEach((mat) => {
+                        // Loop through properties to find textures and dispose them
+                        for (const key in mat) {
+                            const prop = (mat as any)[key];
+                            if (prop && (prop as any).isTexture) {
+                                (prop as any).dispose();
+                            }
+                        }
+                        mat.dispose();
+                    });
+                }
+
+                // Material Tuning - Assign shared instance
+                mesh.material = sharedMaterial;
             }
         });
 
-        if (geometries.length === 0) return null;
-
-        // Merge all geometries into a single buffer
-        const mergedGeometry = mergeGeometries(geometries, false);
-        
-        // Clean up the intermediate clones to free memory
-        geometries.forEach(g => g.dispose());
-
-        if (!mergedGeometry) return null;
-
-        const mesh = new Mesh(mergedGeometry, sharedMaterial);
-
-        // Shadows removed for performance
-        mesh.castShadow = false;
-        mesh.receiveShadow = false;
-
-        // 2. Fix Orientation (if needed)
+        // 2. Fix Orientation
         if (isNativeYUp) {
-            mesh.rotation.x = Math.PI / 2;
+            scene.rotation.x = Math.PI / 2;
         }
-        mesh.updateMatrixWorld(true);
 
-        // 3. Calculate Bounding Box on the final merged mesh
-        const box = new Box3().setFromObject(mesh);
+        // 3. Update Matrix
+        scene.updateMatrixWorld(true);
+
+        // 4. Calculate Bounding Box
+        const box = new Box3().setFromObject(scene);
         const center = new Vector3();
         box.getCenter(center);
         const size = new Vector3();
         box.getSize(size);
 
-        // 4. Center the mesh visual
-        // We apply an offset to the mesh position so that its visual center is at (0,0,0) of its parent group.
-        // We convert the calculated world center back to local space (though parent is likely identity).
-        const localCenter = mesh.worldToLocal(center.clone());
+        // 5. FIX: Convert World Center to Local Center
+        // We want to know where the center is relative to the PARENT group, not the world.
+        // This ensures that even if the mesh has some internal offsets or if parents are moved,
+        // we calculate the correct counter-offset.
+        const localCenter = scene.worldToLocal(center.clone());
+
+        // 6. Apply Center Offset (Use Local Center!)
+        scene.position.x = -localCenter.x;
+        scene.position.y = -localCenter.y;
         
-        mesh.position.x = -localCenter.x;
-        mesh.position.y = -localCenter.y;
-        
-        // For Z, we want the bottom of the bounding box to sit on the floor (Z=0)
-        // localCenter.z is the geometric middle. 
-        // -localCenter.z moves middle to 0.
-        // + (size.z / 2) moves bottom to 0.
-        mesh.position.z = -localCenter.z + (size.z / 2); 
+        // For Z, we want the bottom of the box to be at 0.
+        // localCenter.z corresponds to the geometric center.
+        // We shift by -localCenter.z to center it on Z, then add half height.
+        scene.position.z = -localCenter.z + (size.z / 2); 
 
-        // Store dimensions in userData to retrieve in the effect below
-        mesh.userData.dimensions = { x: size.x, y: size.y, z: size.z };
+        // 7. Report Dimensions to Store
+        updateModelDimensions(modelId, size.x, size.y, size.z);
 
-        return mesh;
+    }, [scene, sharedMaterial, isNativeYUp, modelId, updateModelDimensions]);
 
-    }, [scene, sharedMaterial, isNativeYUp]);
-
-    // Report dimensions to the global store
-    useEffect(() => {
-        if (mergedMesh && mergedMesh.userData.dimensions) {
-            const { x, y, z } = mergedMesh.userData.dimensions;
-            updateModelDimensions(modelId, x, y, z);
-        }
-    }, [mergedMesh, modelId, updateModelDimensions]);
-
-    if (!mergedMesh) return null;
-
-    // PERFORMANCE: Wrap in BVH for accelerated raycasting on the complex geometry
+    // PERFORMANCE: Wrap in BVH for accelerated raycasting
     return (
         <Bvh firstHitOnly>
-            <primitive object={mergedMesh} />
+            <primitive object={scene} />
         </Bvh>
     );
 };
