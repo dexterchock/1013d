@@ -12,8 +12,8 @@ const ViewerScene = React.lazy(() =>
 );
 
 // Declare intrinsic elements for TypeScript to recognize <model-viewer>
-// Use module augmentation for 'react' to ensure it merges correctly with existing JSX types
-declare module 'react' {
+// Use module augmentation for global JSX namespace to ensure it merges correctly
+declare global {
   namespace JSX {
     interface IntrinsicElements {
       'model-viewer': any;
