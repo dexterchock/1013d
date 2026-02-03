@@ -47,7 +47,7 @@ Built with performance in mind using:
 
 ## Author
 
-**Dexter Chock** [Instagram](https://www.instagram.com/dexterchock)
+[**Dexter Chock**](https://www.instagram.com/dexterchock)
 
 ---
 
