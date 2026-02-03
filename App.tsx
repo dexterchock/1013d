@@ -5,21 +5,29 @@ import { CalibrationModal } from './components/CalibrationModal';
 import type { CameraControls } from '@react-three/drei';
 import { useStore } from './store';
 
-// Lazy load the heavy 3D scene
-// This puts Three.js, R3F, and the canvas in a separate chunk
-const ViewerScene = React.lazy(() => 
-  import('./components/ViewerScene').then(module => ({ default: module.ViewerScene }))
-);
-
 // Declare intrinsic elements for TypeScript to recognize <model-viewer>
 // Use module augmentation for global JSX namespace to ensure it merges correctly
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      'model-viewer': any;
+      'model-viewer': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        src?: string | null;
+        ar?: boolean;
+        'ar-modes'?: string;
+        'camera-controls'?: boolean;
+        style?: React.CSSProperties;
+        ref?: React.Ref<any>;
+        [key: string]: any;
+      };
     }
   }
 }
+
+// Lazy load the heavy 3D scene
+// This puts Three.js, R3F, and the canvas in a separate chunk
+const ViewerScene = React.lazy(() => 
+  import('./components/ViewerScene').then(module => ({ default: module.ViewerScene }))
+);
 
 function App() {
   const controlsRef = useRef<CameraControls>(null);
