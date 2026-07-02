@@ -53,34 +53,35 @@
     </style>
 
     <script type="application/ld+json">
-    [
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "1013D",
-		"alternateName": ["1013d", "1013D Viewer", "1013d.pages.dev"],
-        "url": "https://1013d.pages.dev/"
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "1013D",
-        "author": {
-          "@type": "Person",
-          "name": "Dexter Chock",
-          "url": "https://www.instagram.com/dexterchock"
-        },
-        "applicationCategory": "EngineeringApplication",
-        "softwareRequirements": "WebGL 2.0",
-        "featureList": "1:1 Physical Scale, Augmented Reality (AR) Preview, STL/OBJ/3MF Support"
-      }
-    ]
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "1013D",
+      "alternateName": ["1013d", "1013D Viewer"],
+      "url": "https://1013d.pages.dev/"
+    }
     </script>
     
-    </head>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "1013D",
+      "author": {
+        "@type": "Person",
+        "name": "Dexter Chock",
+        "url": "https://www.instagram.com/dexterchock"
+      },
+      "applicationCategory": "EngineeringApplication",
+      "softwareRequirements": "WebGL 2.0",
+      "featureList": "1:1 Physical Scale, Augmented Reality (AR) Preview, STL/OBJ/3MF Support"
+    }
+    </script>
+    
+  </head>
   <body>
     <div id="root">
-        <div style="
+        <h1 style="
             display: flex; 
             justify-content: center; 
             align-items: center; 
@@ -89,9 +90,10 @@
             font-family: sans-serif; 
             font-weight: bold; 
             font-size: 2rem;
+            margin: 0;
         ">
             1013D
-        </div>
+        </h1>
     </div>
 
     <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
