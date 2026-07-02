@@ -26,17 +26,17 @@ Beyond standard viewing, 1013D features a built-in **Augmented Reality (AR)** en
 
 ## Key Features
 
-- ** True 1:1 Physical Scale**
-  Calibrate your specific monitor PPI (Pixels Per Inch) by typing your screen size or using a standard ID card (ISO 7810). Once calibrated, the object on your screen matches its exact real-world dimensions.
+- **True 1:1 Physical Scale**
+  Calibrate your monitor's PPI (Pixels Per Inch) by entering your screen size or alignment with a standard ID card (ISO 7810). Once calibrated, the 3D model on your screen matches its exact real-world dimensions.
 
-- ** Instant AR Preview**
-  Generate AR-ready assets on the fly. View your 3D models in your actual environment on your mobile or VR headset.
+- **Instant AR Preview**
+  Generate AR-compatible files instantly. View your models in your physical room using a mobile device or AR headset.
 
-- ** UI**
-  A modern, immersive user interface featuring a minimal, true black background and colorful 3D model aesthetic that keeps the focus on your models.
+- **Immersive Dark UI**
+  A clean, modern interface designed with a true black background and vibrant accents, making it easy to view fine structural details on your assets.
 
-- ** Broad Format Support**
-  Native support for **STL**, **OBJ**, and **3MF** files.
+- **Broad Format Support**
+  Native, client-side processing for **STL**, **OBJ**, and **3MF** files.
 
 ## Tech Stack
 
