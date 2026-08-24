@@ -52,29 +52,39 @@
       }
     </style>
 
+    <!-- Combined Structured Data (Fixes both Google Site Name & Rich Results Validation) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "1013D",
-      "alternateName": ["1013d", "1013D Viewer"],
-      "url": "https://1013d.pages.dev/"
-    }
-    </script>
-    
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "1013D",
-      "author": {
-        "@type": "Person",
-        "name": "Dexter Chock",
-        "url": "https://www.instagram.com/dexterchock"
-      },
-      "applicationCategory": "EngineeringApplication",
-      "softwareRequirements": "WebGL 2.0",
-      "featureList": "1:1 Physical Scale, Augmented Reality (AR) Preview, STL/OBJ/3MF Support"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://1013d.pages.dev/#website",
+          "name": "1013D",
+          "alternateName": ["1013d", "1013D Viewer"],
+          "url": "https://1013d.pages.dev/"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://1013d.pages.dev/#software",
+          "name": "1013D",
+          "url": "https://1013d.pages.dev/",
+          "applicationCategory": "EngineeringApplication",
+          "operatingSystem": "All, Web Browser",
+          "softwareRequirements": "WebGL 2.0",
+          "featureList": "1:1 Physical Scale, Augmented Reality (AR) Preview, STL/OBJ/3MF Support",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "author": {
+            "@type": "Person",
+            "name": "Dexter Chock",
+            "url": "https://www.instagram.com/dexterchock"
+          }
+        }
+      ]
     }
     </script>
     
@@ -119,4 +129,5 @@
 
     <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "5b09c717ec08483d9ed9a6cf43e2a1a6"}'></script>
   </body>
+</html>
 </html>
