@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { CameraControls, Environment, Grid, Text } from '@react-three/drei';
+import { CameraControls, Environment, Grid, Lightformer, Text } from '@react-three/drei';
 import CameraControlsImpl from 'camera-controls';
 import {
   MathUtils,
@@ -9,8 +9,11 @@ import {
   ACESFilmicToneMapping,
 } from 'three';
 import { useStore } from '../store';
-import { ModelWrapper } from './Model';
 import { ErrorBoundary } from './ErrorBoundary';
+
+const ModelWrapper = React.lazy(() =>
+  import('./Model').then((module) => ({ default: module.ModelWrapper }))
+);
 
 const ErrorFallback: React.FC<{ fileName: string }> = ({ fileName }) => {
   return (
@@ -211,7 +214,41 @@ const SceneContent: React.FC<{
         }}
       />
 
-      <Environment preset="city" blur={0.8} />
+      {/* Zero-network procedural studio reflections (avoids external HDR download & redirect) */}
+      <Environment resolution={128} frames={1}>
+        <Lightformer
+          form="rect"
+          intensity={2}
+          color="#ffffff"
+          position={[0, -5, 10]}
+          scale={[12, 12, 1]}
+          target={[0, 0, 0]}
+        />
+        <Lightformer
+          form="rect"
+          intensity={1.4}
+          color="#dbeafe"
+          position={[8, 6, 4]}
+          scale={[8, 8, 1]}
+          target={[0, 0, 0]}
+        />
+        <Lightformer
+          form="rect"
+          intensity={1.1}
+          color="#f8fafc"
+          position={[-8, 4, 4]}
+          scale={[8, 8, 1]}
+          target={[0, 0, 0]}
+        />
+        <Lightformer
+          form="ring"
+          intensity={0.8}
+          color="#94a3b8"
+          position={[0, 0, -8]}
+          scale={10}
+          target={[0, 0, 0]}
+        />
+      </Environment>
       <ambientLight intensity={0.7} />
       <directionalLight position={[50, 50, 200]} intensity={1.1} color="#ffffff" />
 
@@ -233,17 +270,18 @@ const SceneContent: React.FC<{
         />
       )}
 
-      {models.map((model) => (
-        <ErrorBoundary
-          key={model.id}
-          fallback={<ErrorFallback fileName={model.file.name} />}
-          onError={(e) => console.warn(`Model failed to load: ${model.file.name}`, e)}
-        >
-          <React.Suspense fallback={null}>
-            <ModelWrapper modelData={model} />
-          </React.Suspense>
-        </ErrorBoundary>
-      ))}
+      {models.length > 0 &&
+        models.map((model) => (
+          <ErrorBoundary
+            key={model.id}
+            fallback={<ErrorFallback fileName={model.file.name} />}
+            onError={(e) => console.warn(`Model failed to load: ${model.file.name}`, e)}
+          >
+            <Suspense fallback={null}>
+              <ModelWrapper modelData={model} />
+            </Suspense>
+          </ErrorBoundary>
+        ))}
     </>
   );
 });

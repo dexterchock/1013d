@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MathUtils } from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 import { NumericInput } from './NumericInput';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 };
 const ONE_VEC = { x: 1, y: 1, z: 1 };
+const DEG2RAD = Math.PI / 180;
+const RAD2DEG = 180 / Math.PI;
 
 export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
   const isSelected = useStore((state) => state.selectedModelId === model.id);
@@ -34,7 +35,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
     axis: 'x' | 'y' | 'z',
     value: number
   ) => {
-    const finalValue = type === 'rotation' ? MathUtils.degToRad(value) : value;
+    const finalValue = type === 'rotation' ? value * DEG2RAD : value;
     const current = type === 'position' ? pos : type === 'rotation' ? rot : scale;
     updateModelTransform(model.id, {
       [type]: { ...current, [axis]: finalValue },
@@ -125,19 +126,19 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
                   <NumericInput
                     id={`rot-x-${model.id}`}
                     label="X"
-                    value={Math.round(MathUtils.radToDeg(rot.x))}
+                    value={Math.round(rot.x * RAD2DEG)}
                     onChange={(v) => updateTransform('rotation', 'x', v)}
                   />
                   <NumericInput
                     id={`rot-y-${model.id}`}
                     label="Y"
-                    value={Math.round(MathUtils.radToDeg(rot.y))}
+                    value={Math.round(rot.y * RAD2DEG)}
                     onChange={(v) => updateTransform('rotation', 'y', v)}
                   />
                   <NumericInput
                     id={`rot-z-${model.id}`}
                     label="Z"
-                    value={Math.round(MathUtils.radToDeg(rot.z))}
+                    value={Math.round(rot.z * RAD2DEG)}
                     onChange={(v) => updateTransform('rotation', 'z', v)}
                   />
                 </div>

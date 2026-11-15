@@ -2,15 +2,13 @@ import React from 'react';
 import type { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer } from './LiquidContainer';
-import { transitionToAxis, apply1to1Scale } from '../utils/viewUtils';
 import { MagnetIcon, MoveIcon, RotateIcon, WireframeIcon } from './Icons';
 
 interface BottomPillProps {
   controlsRef: React.MutableRefObject<CameraControls | null>;
-  mounted: boolean;
 }
 
-export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef, mounted }) => {
+export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
   const selectedModelId = useStore((state) => state.selectedModelId);
   const gizmoMode = useStore((state) => state.gizmoMode);
   const rotationSnap = useStore((state) => state.rotationSnap);
@@ -28,20 +26,26 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef, mounted }) 
   const showSnap = showModelTools && gizmoMode === 'rotate';
   const showAR = showModelTools && isArSupported;
 
+  const handleAxisClick = (axis: 'X' | 'Y' | 'Z') => {
+    void import('../utils/viewUtils').then(({ transitionToAxis }) => {
+      transitionToAxis(controlsRef.current, axis);
+    });
+  };
+
+  const handle1to1Click = () => {
+    void import('../utils/viewUtils').then(({ apply1to1Scale }) => {
+      apply1to1Scale(controlsRef.current, ppi);
+    });
+  };
+
   return (
-    <div
-      className={`
-        absolute bottom-10 md:bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto
-        transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] delay-100
-        ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
-      `}
-    >
+    <div className="absolute bottom-10 md:bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto">
       <LiquidContainer className="flex items-center gap-0 p-0 rounded-full overflow-hidden">
         {/* Axis Views Group */}
         {(['X', 'Y', 'Z'] as const).map((axis) => (
           <button
             key={axis}
-            onClick={() => transitionToAxis(controlsRef.current, axis)}
+            onClick={() => handleAxisClick(axis)}
             className="h-10 w-10 flex items-center justify-center text-xs font-mono font-bold text-white/40 hover:text-white hover:bg-white/5 border-r border-white/10 transition-colors"
             aria-label={`View ${axis} axis`}
           >
@@ -150,7 +154,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef, mounted }) 
 
         {/* 1:1 Button - End Cap */}
         <button
-          onClick={() => apply1to1Scale(controlsRef.current, ppi)}
+          onClick={handle1to1Click}
           className={`
             h-10 px-5 flex items-center justify-center
             text-xs font-bold tracking-wider transition-all duration-300
@@ -160,7 +164,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef, mounted }) 
                 : 'bg-transparent text-white/40 hover:bg-white/5 hover:text-white'
             }
           `}
-          aria-label="Activate 1 to 1 real world scale"
+          aria-label="1:1 real world scale"
         >
           1:1
         </button>

@@ -37,7 +37,6 @@ const ViewerScene = React.lazy(() =>
 
 function App() {
   const controlsRef = useRef<CameraControls | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const addModels = useStore((state) => state.addModels);
@@ -49,8 +48,6 @@ function App() {
   const modelViewerRef = useRef<ModelViewerElement | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setIsMounted(true), 100);
-
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const isAllowed =
@@ -78,7 +75,6 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      clearTimeout(t);
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
       setArModelUrl(null);
@@ -209,15 +205,6 @@ function App() {
 
       {/* 1:1 Scale Aura Effect */}
       <AuraEffect />
-
-      {/* Initial FOUC Curtain */}
-      <div
-        className={`
-          fixed inset-0 z-[9999] bg-[#050505] pointer-events-none
-          transition-opacity duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)]
-          ${isMounted ? 'opacity-0' : 'opacity-100'}
-        `}
-      />
 
       {/* Hidden Model Viewer for AR capabilities */}
       {isArSupported && (

@@ -28,11 +28,11 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   const clearUploadError = useStore((state) => state.clearUploadError);
 
   const [activeTab, setActiveTab] = useState<'models' | 'calibration'>('models');
-  const [mounted, setMounted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
   // Sync logical screen resolution on mount and resize
   useEffect(() => {
@@ -55,36 +55,34 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     return () => clearTimeout(timer);
   }, [uploadError, clearUploadError]);
 
-  // Keep sidebar height synced via ResizeObserver without 60fps interval polling
+  // Keep sidebar height synced via ResizeObserver on unconstrained inner wrapper (zero forced reflows)
   useEffect(() => {
     const content = contentRef.current;
+    const inner = innerRef.current;
     const container = containerRef.current;
-    if (!content || !container) return;
+    if (!content || !inner || !container) return;
 
-    const updateHeight = () => {
+    if (!sidebarOpen) {
+      container.style.height = '56px';
+      content.scrollTop = 0;
+    }
+
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
       if (!sidebarOpen) {
         container.style.height = '56px';
-        content.scrollTop = 0;
         return;
       }
-      container.style.height = `${content.scrollHeight + 32}px`;
-    };
+      const height = Math.ceil(entry.contentRect.height) + 32;
+      container.style.height = `${height}px`;
+    });
 
-    updateHeight();
-    const rafId = requestAnimationFrame(updateHeight);
-
-    const ro = new ResizeObserver(updateHeight);
-    ro.observe(content);
-
+    ro.observe(inner);
     return () => {
-      cancelAnimationFrame(rafId);
       ro.disconnect();
     };
-  }, [sidebarOpen, activeTab, models.length, showAbout, uploadError]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  }, [sidebarOpen]);
 
   const { resolutionWidth, resolutionHeight, diagonalInches } = calibrationSettings;
 
@@ -114,7 +112,6 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           absolute left-4 top-4
           transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden rounded-2xl
           ${sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
-          ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}
         `}
         style={{ maxHeight: '90vh' }}
       >
@@ -129,16 +126,20 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               sidebarOpen ? 'overflow-y-auto' : 'overflow-hidden'
             }`}
           >
-            {/* Header */}
+            <div ref={innerRef} className="flex flex-col shrink-0">
+              {/* Header */}
             <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-0.5 mb-0">
-              <button
-                type="button"
-                className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
-                onClick={toggleSidebar}
-                aria-label="Toggle sidebar"
-              >
-                <AnimatedLogo />
-              </button>
+              <h1 className="m-0 leading-none">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
+                  onClick={toggleSidebar}
+                  aria-label="1013D, toggle sidebar"
+                >
+                  <span className="sr-only">1013D</span>
+                  <AnimatedLogo />
+                </button>
+              </h1>
 
               <div className="flex items-center gap-1">
                 {sidebarOpen && (
@@ -164,17 +165,17 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               </div>
             </div>
 
-            {/* Collapsible Content */}
-            <div
-              className={`
-                flex flex-col flex-1 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
-                ${
-                  sidebarOpen
-                    ? 'mt-4 opacity-100 translate-y-0 delay-100'
-                    : 'mt-0 opacity-0 -translate-y-4 pointer-events-none'
-                }
-              `}
-            >
+              {/* Collapsible Content */}
+              <div
+                className={`
+                  flex flex-col transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+                  ${
+                    sidebarOpen
+                      ? 'mt-4 opacity-100 translate-y-0 delay-100'
+                      : 'mt-0 opacity-0 -translate-y-4 pointer-events-none'
+                  }
+                `}
+              >
               {/* About Section */}
               <div
                 className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -266,9 +267,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   )}
 
                   <div className="flex-1 overflow-y-auto no-scrollbar mb-2 max-h-[50vh]">
-                    <h3 className="text-xs font-mono uppercase text-white/40 mb-2">
+                    <h2 className="text-xs font-mono uppercase text-white/40 mb-2">
                       Active Models
-                    </h3>
+                    </h2>
                     <div className="space-y-2">
                       {models.length === 0 && (
                         <div className="flex flex-col items-center gap-2 p-2">
@@ -299,9 +300,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
                   {/* Calculator Section */}
                   <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
-                    <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
+                    <h2 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
                       Auto Calculate
-                    </h3>
+                    </h2>
 
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
@@ -350,9 +351,9 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
                   {/* Manual Calibration Trigger */}
                   <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
-                    <h3 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
+                    <h2 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
                       Manual Adjustment
-                    </h3>
+                    </h2>
                     <p className="text-[10px] text-white/40 mb-3">
                       Use a physical credit card to calibrate the scale precisely.
                     </p>
@@ -374,12 +375,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </LiquidContainer>
       </div>
 
       {/* BOTTOM CONTROL PILL */}
-      <BottomPill controlsRef={controlsRef} mounted={mounted} />
+      <BottomPill controlsRef={controlsRef} />
     </div>
   );
 };

@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Exponential Ease Out creates a fast start and long tail so 91..100 remain legible.
 const easeOutExpo = (x: number): number => {
   return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
 };
 
 export const AnimatedLogo: React.FC = () => {
-  const [displayValue, setDisplayValue] = useState(0);
   const [showSuffix, setShowSuffix] = useState(false);
 
   const requestRef = useRef<number>(0);
   const suffixTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const previousFloatRef = useRef<number>(0);
   const previousIntRef = useRef<number>(0);
   const time100StartRef = useRef<number>(0);
   const suffixTriggeredRef = useRef<boolean>(false);
@@ -22,7 +19,7 @@ export const AnimatedLogo: React.FC = () => {
   const START_VAL = 0;
   const LOGICAL_END_VAL = 101.5;
   const DISPLAY_CLAMP = 101;
-  const DURATION = 3300;
+  const DURATION = 2200;
 
   useEffect(() => {
     const animate = (time: number) => {
@@ -40,6 +37,10 @@ export const AnimatedLogo: React.FC = () => {
       if (currentInt > DISPLAY_CLAMP) currentInt = DISPLAY_CLAMP;
 
       if (currentInt !== previousIntRef.current) {
+        if (numberSpanRef.current) {
+          numberSpanRef.current.textContent = String(currentInt);
+        }
+
         if (currentInt === 100) {
           time100StartRef.current = time;
         }
@@ -47,38 +48,20 @@ export const AnimatedLogo: React.FC = () => {
           suffixTriggeredRef.current = true;
           const durationOf100 = time100StartRef.current
             ? time - time100StartRef.current
-            : 500;
+            : 350;
 
           suffixTimeoutRef.current = setTimeout(() => {
             setShowSuffix(true);
           }, durationOf100);
         }
+        previousIntRef.current = currentInt;
       }
-      previousIntRef.current = currentInt;
-
-      const velocity = currentFloat - previousFloatRef.current;
-      previousFloatRef.current = currentFloat;
-
-      if (numberSpanRef.current) {
-        if (velocity > 0.15) {
-          const blurAmount = Math.min(velocity * 4, 3);
-          numberSpanRef.current.style.filter = `blur(${blurAmount}px)`;
-          numberSpanRef.current.style.opacity = `${1 - blurAmount * 0.1}`;
-        } else {
-          numberSpanRef.current.style.filter = 'none';
-          numberSpanRef.current.style.opacity = '1';
-        }
-      }
-
-      setDisplayValue(currentInt);
 
       if (progress < 1) {
         requestRef.current = requestAnimationFrame(animate);
       } else {
-        setDisplayValue(DISPLAY_CLAMP);
         if (numberSpanRef.current) {
-          numberSpanRef.current.style.filter = 'none';
-          numberSpanRef.current.style.opacity = '1';
+          numberSpanRef.current.textContent = String(DISPLAY_CLAMP);
         }
         if (!suffixTriggeredRef.current) {
           suffixTriggeredRef.current = true;
@@ -96,23 +79,23 @@ export const AnimatedLogo: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex items-center select-none cursor-default group" aria-label="1013D">
-      <div className="relative overflow-visible">
+    <span className="flex items-center select-none cursor-pointer group" aria-hidden="true">
+      <span className="relative overflow-visible">
         <span
           ref={numberSpanRef}
-          className="text-xl font-bold tracking-tight text-white tabular-nums leading-none font-mono block will-change-[filter,opacity,transform]"
+          className="text-xl font-bold tracking-tight text-white tabular-nums leading-none font-mono block"
         >
-          {displayValue}
+          0
         </span>
-      </div>
+      </span>
 
-      <div
+      <span
         className={`
           grid transition-[grid-template-columns] duration-700 ease-[cubic-bezier(0.19,1,0.22,1)]
           ${showSuffix ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}
         `}
       >
-        <div className="overflow-hidden flex items-center">
+        <span className="overflow-hidden flex items-center">
           <span
             className={`
               text-xl font-bold tracking-tight text-blue-500 leading-none font-mono ml-0.5
@@ -122,8 +105,8 @@ export const AnimatedLogo: React.FC = () => {
           >
             3D
           </span>
-        </div>
-      </div>
-    </div>
+        </span>
+      </span>
+    </span>
   );
 };

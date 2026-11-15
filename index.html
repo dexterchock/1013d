@@ -6,7 +6,7 @@
     <meta name="application-name" content="1013D" />
     <meta name="apple-mobile-web-app-title" content="1013D" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="Dexter Chock" />
     <meta name="robots" content="index, follow" />
     
@@ -52,17 +52,25 @@
       }
     </style>
 
-    <!-- Combined Structured Data (Fixes both Google Site Name & Rich Results Validation) -->
+    <!-- Combined Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
+          "@type": "Person",
+          "@id": "https://1013d.pages.dev/#author",
+          "name": "Dexter Chock",
+          "url": "https://www.instagram.com/dexterchock"
+        },
+        {
           "@type": "WebSite",
           "@id": "https://1013d.pages.dev/#website",
           "name": "1013D",
-          "alternateName": ["1013d", "1013D Viewer"],
-          "url": "https://1013d.pages.dev/"
+          "url": "https://1013d.pages.dev/",
+          "publisher": {
+            "@id": "https://1013d.pages.dev/#author"
+          }
         },
         {
           "@type": "SoftwareApplication",
@@ -79,9 +87,7 @@
             "priceCurrency": "USD"
           },
           "author": {
-            "@type": "Person",
-            "name": "Dexter Chock",
-            "url": "https://www.instagram.com/dexterchock"
+            "@id": "https://1013d.pages.dev/#author"
           }
         }
       ]

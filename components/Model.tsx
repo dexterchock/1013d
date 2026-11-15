@@ -3,7 +3,6 @@ import { useLoader, useThree, ThreeEvent } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { TransformControls, Bvh } from '@react-three/drei';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import {
@@ -332,53 +331,69 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
     };
   }, [group, isSelected, isReady, modelData.id, updateModelTransform]);
 
-  // AR GLB export
+  // AR GLB export (lazy-loads GLTFExporter only when AR is requested)
   useEffect(() => {
     if (!arGenerationRequest || !isSelected || !group) return;
 
+    let cancelled = false;
     clearArGenerationRequest();
-    const exporter = new GLTFExporter();
-    const modelClone = group.clone();
 
-    // Strip wireframe overlays so they are never exported into AR.
-    const overlaysToRemove: Object3D[] = [];
-    modelClone.traverse((child) => {
-      if (child.userData.isWireframeOverlay) {
-        overlaysToRemove.push(child);
-      }
-    });
-    for (const overlay of overlaysToRemove) {
-      overlay.parent?.remove(overlay);
-    }
+    const exportGlb = async () => {
+      const { GLTFExporter } = await import(
+        'three/examples/jsm/exporters/GLTFExporter.js'
+      );
+      if (cancelled) return;
 
-    // Center the model at AR placement origin instead of retaining build-plate layout offsets.
-    modelClone.position.set(0, 0, 0);
+      const exporter = new GLTFExporter();
+      const modelClone = group.clone();
 
-    // Millimeters (viewer) -> Meters (AR/glTF)
-    const unitsWrapper = new Group();
-    unitsWrapper.scale.setScalar(0.001);
-    unitsWrapper.add(modelClone);
-
-    // Z-up (viewer) -> Y-up (AR/glTF)
-    const orientationWrapper = new Group();
-    orientationWrapper.rotation.x = -Math.PI / 2;
-    orientationWrapper.add(unitsWrapper);
-    orientationWrapper.updateMatrixWorld(true);
-
-    exporter.parse(
-      orientationWrapper,
-      (gltf) => {
-        if (gltf instanceof ArrayBuffer) {
-          const blob = new Blob([gltf], { type: 'application/octet-stream' });
-          const url = URL.createObjectURL(blob);
-          setArModelUrl(url);
+      // Strip wireframe overlays so they are never exported into AR.
+      const overlaysToRemove: Object3D[] = [];
+      modelClone.traverse((child) => {
+        if (child.userData.isWireframeOverlay) {
+          overlaysToRemove.push(child);
         }
-      },
-      (error) => {
-        console.error('An error happened during GLTF export:', error);
-      },
-      { binary: true }
-    );
+      });
+      for (const overlay of overlaysToRemove) {
+        overlay.parent?.remove(overlay);
+      }
+
+      // Center the model at AR placement origin instead of retaining build-plate layout offsets.
+      modelClone.position.set(0, 0, 0);
+
+      // Millimeters (viewer) -> Meters (AR/glTF)
+      const unitsWrapper = new Group();
+      unitsWrapper.scale.setScalar(0.001);
+      unitsWrapper.add(modelClone);
+
+      // Z-up (viewer) -> Y-up (AR/glTF)
+      const orientationWrapper = new Group();
+      orientationWrapper.rotation.x = -Math.PI / 2;
+      orientationWrapper.add(unitsWrapper);
+      orientationWrapper.updateMatrixWorld(true);
+
+      exporter.parse(
+        orientationWrapper,
+        (gltf) => {
+          if (cancelled) return;
+          if (gltf instanceof ArrayBuffer) {
+            const blob = new Blob([gltf], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            setArModelUrl(url);
+          }
+        },
+        (error) => {
+          console.error('An error happened during GLTF export:', error);
+        },
+        { binary: true }
+      );
+    };
+
+    void exportGlb();
+
+    return () => {
+      cancelled = true;
+    };
   }, [arGenerationRequest, isSelected, group, clearArGenerationRequest, setArModelUrl]);
 
   const posX = position?.x ?? 0;
