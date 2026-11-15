@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://1013d.pages.dev/">
-    <img src="./public/og-image.jpg" alt="1013D Banner" width="100%" />
+    <img src="./public/og-image.jpg" alt="1013D Preview" width="100%" />
   </a>
 </div>
 
@@ -10,144 +10,62 @@
 
 # 1013D
 
-**See your 3D model at its actual physical size.**
+**Inspect 3D models at their true 1:1 physical size directly in your browser.**
 
 [**Launch 1013D**](https://1013d.pages.dev/)
 
 </div>
 
----
+## What 1013D Solves
 
-## What is 1013D?
-
-**1013D** is a browser-based 3D viewer that lets you view STL, OBJ, and 3MF models at **1:1 physical scale**.
-
-A CAD program can tell you that a part is 80 mm wide. A normal 3D viewer can show you the shape. But neither necessarily gives you a good sense of what **80 mm actually looks like**.
-
-1013D was built to solve that specific problem.
-
-After calibrating your display, a model can be displayed at its approximate real-world dimensions on your screen.
-
-> **If the model is 80 mm wide, it should appear about 80 mm wide.**
-
-This makes it useful for checking the size of 3D-printed parts, enclosures, prototypes, and other physical objects before making them.
-
----
+CAD software can tell you a part is 80 mm wide, and standard viewers let you orbit the mesh, yet neither shows how big 80 mm actually feels in hand before printing. 1013D calibrates an orthographic Three.js camera to your screen's physical pixel density so parts render at true millimeter scale on your monitor or tablet, or inside your room via mobile AR.
 
 ## Features
 
-### 1:1 Physical Scale
+* **True 1:1 Physical Scale**: Toggles an orthographic camera locked to your calibrated PPI so you can hold a ruler, caliper, PCB, or hardware directly up to the screen for fit verification.
+* **Screen & Card Calibration**: Auto calculate PPI from detected logical resolution and monitor diagonal inches, or scale an interactive gauge against a standard ISO/IEC 7810 ID 1 credit card (85.60 mm x 53.98 mm).
+* **STL, OBJ, and 3MF Support**: Load multiple binary or ASCII `.stl`, `.obj`, and `.3mf` files locally, or click **Try Example** to inspect the bundled 20 mm calibration cube.
+* **Wireframe Overlay & Transform Tools**: Switch between shaded view and shaded with wireframe overlay, snap camera orientation to `X`, `Y`, or `Z` axes, reposition or rotate models with optional 15 degree snap, and edit live millimeter dimensions.
+* **Mobile AR Export**: Converts the scene on demand to GLB and USDZ for iOS AR Quick Look, Android Scene Viewer, and WebXR.
+* **Client Side Privacy**: All mesh parsing, scaling, and AR exporting run locally in your browser without uploading files to any server.
 
-Calibrate your display using a known physical reference or your monitor's specifications.
+## Quick Calibration Example
 
-Once calibrated, 1013D maps the model's dimensions to the physical dimensions of your display.
+1. Open [1013D](https://1013d.pages.dev/) and load an `.stl`, `.obj`, or `.3mf` file.
+2. Open the **Calibration** tab to enter your monitor diagonal size or complete credit card calibration.
+3. Click **`1:1`** on the bottom toolbar to lock physical scale (`20 mm` renders as `20 mm` on the calibrated screen).
 
-This allows you to compare the model directly against objects such as:
+## Local Development
 
-* Rulers
-* Components
-* Enclosures
-* ID cards
-* Other physical references
+Requirements: Node.js 18+ and npm.
 
-### AR Preview
-
-Take the model beyond the screen and preview it in the real world using supported mobile AR viewers.
-
-Supported workflows include:
-
-* iOS AR Quick Look
-* Android Scene Viewer
-
-### 3D Model Support
-
-Supports:
-
-* **STL**
-* **OBJ**
-* **3MF**
-
-Models are processed directly in the browser.
-
-### Client-Side Processing
-
-The core viewer does not require uploading your 3D model to a remote processing service.
-
-Your model is loaded and processed locally in the browser.
-
----
-
-## How 1:1 Calibration Works
-
-Displaying a model at physical scale is not as simple as assuming that one screen pixel equals one physical pixel.
-
-Browser zoom, operating-system scaling, device pixel ratio, display resolution, and monitor size can all affect the relationship between rendered pixels and physical dimensions.
-
-1013D therefore uses display calibration to establish that relationship.
-
-You can calibrate using:
-
-* Your display's physical size and resolution
-* A standard ISO/IEC 7810 ID-1 card
-* Another object with a known physical dimension
-
-Once calibrated, the viewer can determine how many screen pixels correspond to a physical millimetre.
-
----
-
-## Example
-
-A model measuring:
-
-```text
-100 mm × 50 mm × 20 mm
+```bash
+git clone https://github.com/dexterchock/1013d.git
+cd 1013d
+npm install
+npm run dev
 ```
 
-can be displayed at approximately:
+Useful scripts:
 
-```text
-100 mm × 50 mm × 20 mm
+```bash
+npm run typecheck
+npm run build
+npm run preview
 ```
-
-on the physical screen.
-
-You can then place a ruler, component, or other reference directly against the display to understand the model's actual size before printing it.
-
----
 
 ## Tech Stack
 
-1013D is a client-side web application built with:
+* TypeScript, React, Vite, Tailwind CSS, Zustand
+* Three.js, React Three Fiber, Drei, `@google/model-viewer`
 
-* **TypeScript**
-* **React**
-* **Vite**
-* **Three.js**
-* **React Three Fiber**
-* **WebGL**
-* **Tailwind CSS**
+## Agentic Discovery
 
----
-
-## Project Status
-
-1013D is an independent project and is still under development.
-
-It is not intended to replace CAD software or a slicer.
-
-It is built around one specific problem:
-
-> **Understanding the physical size of a digital model before making it.**
-
-Feedback, bug reports, and suggestions are welcome through GitHub Issues.
-
----
+Machine readable discovery metadata for LLM crawlers and browser agents is published at `/llms.txt`, `/.well-known/ard.json`, and `/.well-known/agent-skill.md`.
 
 ## Author
 
 **[Dexter Chock](https://github.com/dexterchock)**
-
----
 
 <div align="center">
   <sub>© 2026 1013D</sub>
