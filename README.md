@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://1013d.pages.dev/">
-    <img src="./.github/banner.jpg" alt="1013D Preview" width="100%" />
+    <img src="./.github/banner.png" alt="1013D Preview" width="100%" />
   </a>
 </div>
 
