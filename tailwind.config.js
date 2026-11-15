@@ -2,7 +2,11 @@
 export default {
   content: [
     "./index.html",
-    "./**/*.{js,ts,jsx,tsx}"
+    "./App.tsx",
+    "./index.tsx",
+    "./store.ts",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./utils/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -15,7 +19,7 @@ export default {
           100: 'rgba(255, 255, 255, 0.05)',
           200: 'rgba(255, 255, 255, 0.1)',
           300: 'rgba(255, 255, 255, 0.2)',
-        }
+        },
       },
       animation: {
         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -25,9 +29,9 @@ export default {
         fiberBreath: {
           '0%, 100%': { opacity: '0.5' },
           '50%': { opacity: '0.8' },
-        }
-      }
+        },
+      },
     },
   },
   plugins: [],
-}
+};

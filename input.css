@@ -13,14 +13,10 @@
 }
 
 @layer utilities {
-  .liquid-filter {
-    filter: url(#liquid);
-  }
-  
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

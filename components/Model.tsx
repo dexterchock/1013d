@@ -1,290 +1,418 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { useLoader, ThreeEvent } from '@react-three/fiber';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
-import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader';
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useLoader, useThree, ThreeEvent } from '@react-three/fiber';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { TransformControls, Bvh } from '@react-three/drei';
-import { 
-  MeshStandardMaterial, 
-  FrontSide, 
-  Object3D, 
-  Group, 
-  Mesh, 
-  Box3, 
+import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
+import {
+  MeshStandardMaterial,
+  MeshBasicMaterial,
+  DoubleSide,
+  Object3D,
+  Group,
+  Mesh,
+  Box3,
   Vector3,
-  MathUtils
+  Matrix4,
+  Material,
+  Texture,
+  EventDispatcher,
 } from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
 
-// Augment global JSX namespace to fix R3F type errors
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      primitive: any;
-      group: any;
-      mesh: any;
-      boxGeometry: any;
-      meshStandardMaterial: any;
-    }
-  }
-}
-
 interface ModelWrapperProps {
   modelData: LoadedModel;
-  index: number;
 }
 
-// Internal component to handle scene processing and bounds reporting
-const SceneProcessor: React.FC<{ 
-    scene: Object3D | Group | Mesh; 
-    modelId: string; 
-    color: string;
-    isNativeYUp: boolean;
-}> = ({ scene, modelId, color, isNativeYUp }) => {
-    const { updateModelDimensions } = useStore();
+const disposeMaterial = (mat: Material) => {
+  const record = mat as unknown as Record<string, unknown>;
+  for (const key in record) {
+    const prop = record[key];
+    if (prop && typeof prop === 'object' && (prop as Texture).isTexture) {
+      (prop as Texture).dispose();
+    }
+  }
+  mat.dispose();
+};
 
-    // PERFORMANCE: Shared Material
-    // Create one material instance per model color instead of one per mesh.
-    // OPTIMIZATION: Enforce FrontSide (Single-Side Rendering) to cull backfaces.
-    const sharedMaterial = useMemo(() => new MeshStandardMaterial({ 
-        color: color, 
-        roughness: 0.5, 
+const SceneProcessor: React.FC<{
+  scene: Object3D;
+  modelId: string;
+  color: string;
+}> = ({ scene, modelId, color }) => {
+  const updateModelDimensions = useStore((state) => state.updateModelDimensions);
+  const isWireframeVisible = useStore((state) => state.isWireframeVisible);
+  const { invalidate } = useThree();
+
+  const wireframeMeshesRef = useRef<Mesh[]>([]);
+
+  const sharedMaterial = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color,
+        roughness: 0.5,
         metalness: 0.1,
         envMapIntensity: 1.0,
-        side: FrontSide 
-    }), [color]);
+        side: DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      }),
+    [color]
+  );
 
-    useEffect(() => {
-        // --- DRIFT FIX ---
-        // Immediately reset transforms to prevent cumulative drift on re-renders.
-        // Without this, applying an offset to an already offset mesh causes it to fly away.
-        scene.position.set(0, 0, 0);
-        scene.rotation.set(0, 0, 0);
-        scene.scale.set(1, 1, 1);
-        scene.updateMatrixWorld(true);
+  const wireframeMaterial = useMemo(
+    () =>
+      new MeshBasicMaterial({
+        color: '#ffffff',
+        wireframe: true,
+        transparent: true,
+        opacity: 0.25,
+        depthWrite: false,
+      }),
+    []
+  );
 
-        // 1. Apply Color & Material & Aggressive Disposal
-        scene.traverse((child) => {
-            if ((child as Mesh).isMesh) {
-                const mesh = child as Mesh;
-                // Shadows removed
-                mesh.castShadow = false;
-                mesh.receiveShadow = false;
-                
-                // Ensure normals exist for correct lighting
-                if (mesh.geometry && !mesh.geometry.attributes.normal) {
-                    mesh.geometry.computeVertexNormals();
-                }
+  useEffect(() => {
+    return () => {
+      sharedMaterial.dispose();
+    };
+  }, [sharedMaterial]);
 
-                // PERFORMANCE: Aggressive Disposal
-                // If the mesh has existing materials (from loader), strip textures and dispose.
-                if (mesh.material) {
-                    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-                    materials.forEach((mat) => {
-                        // Loop through properties to find textures and dispose them
-                        for (const key in mat) {
-                            const prop = (mat as any)[key];
-                            if (prop && (prop as any).isTexture) {
-                                (prop as any).dispose();
-                            }
-                        }
-                        mat.dispose();
-                    });
-                }
+  useEffect(() => {
+    return () => {
+      wireframeMaterial.dispose();
+    };
+  }, [wireframeMaterial]);
 
-                // Material Tuning - Assign shared instance
-                mesh.material = sharedMaterial;
-            }
-        });
+  useEffect(() => {
+    // Reset local transforms so re-runs do not accumulate offsets.
+    scene.position.set(0, 0, 0);
+    scene.rotation.set(0, 0, 0);
+    scene.scale.set(1, 1, 1);
 
-        // 2. Fix Orientation
-        if (isNativeYUp) {
-            scene.rotation.x = Math.PI / 2;
+    const sourceMeshes: Mesh[] = [];
+    scene.traverse((child) => {
+      if ((child as Mesh).isMesh && !child.userData.isWireframeOverlay) {
+        sourceMeshes.push(child as Mesh);
+      }
+    });
+
+    const createdOverlays: Mesh[] = [];
+    const currentWireframeVisible = useStore.getState().isWireframeVisible;
+
+    for (const mesh of sourceMeshes) {
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+
+      if (mesh.geometry && !mesh.geometry.attributes.normal) {
+        mesh.geometry.computeVertexNormals();
+      }
+
+      if (mesh.material) {
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        for (const mat of materials) {
+          if (mat !== sharedMaterial) {
+            disposeMaterial(mat);
+          }
         }
+      }
 
-        // 3. Update Matrix
-        scene.updateMatrixWorld(true);
+      mesh.material = sharedMaterial;
 
-        // 4. Calculate Bounding Box
-        const box = new Box3().setFromObject(scene);
-        const center = new Vector3();
-        box.getCenter(center);
-        const size = new Vector3();
-        box.getSize(size);
+      if (mesh.geometry) {
+        const wireframeOverlay = new Mesh(mesh.geometry, wireframeMaterial);
+        wireframeOverlay.userData.isWireframeOverlay = true;
+        wireframeOverlay.raycast = () => {};
+        wireframeOverlay.visible = currentWireframeVisible;
+        mesh.add(wireframeOverlay);
+        createdOverlays.push(wireframeOverlay);
+      }
+    }
 
-        // 5. FIX: Convert World Center to Local Center
-        // We want to know where the center is relative to the PARENT group, not the world.
-        // This ensures that even if the mesh has some internal offsets or if parents are moved,
-        // we calculate the correct counter-offset.
-        const localCenter = scene.worldToLocal(center.clone());
+    wireframeMeshesRef.current = createdOverlays;
 
-        // 6. Apply Center Offset (Use Local Center!)
-        scene.position.x = -localCenter.x;
-        scene.position.y = -localCenter.y;
-        
-        // For Z, we want the bottom of the box to be at 0.
-        // localCenter.z corresponds to the geometric center.
-        // We shift by -localCenter.z to center it on Z, then add half height.
-        scene.position.z = -localCenter.z + (size.z / 2); 
+    // Compute bounds in scene's parent-local space, independent of outer <group> transforms.
+    const box = new Box3();
+    const meshBox = new Box3();
+    const relMatrix = new Matrix4();
+    const stack: Object3D[] = [];
 
-        // 7. Report Dimensions to Store
-        updateModelDimensions(modelId, size.x, size.y, size.z);
+    for (const mesh of sourceMeshes) {
+      if (!mesh.geometry) continue;
+      if (!mesh.geometry.boundingBox) {
+        mesh.geometry.computeBoundingBox();
+      }
+      if (!mesh.geometry.boundingBox) continue;
 
-    }, [scene, sharedMaterial, isNativeYUp, modelId, updateModelDimensions]);
+      relMatrix.identity();
+      stack.length = 0;
+      let curr: Object3D | null = mesh;
+      while (curr) {
+        curr.updateMatrix();
+        stack.push(curr);
+        if (curr === scene) break;
+        curr = curr.parent;
+      }
+      for (let i = stack.length - 1; i >= 0; i--) {
+        relMatrix.multiply(stack[i].matrix);
+      }
 
-    // PERFORMANCE: Wrap in BVH for accelerated raycasting
-    return (
-        <Bvh firstHitOnly>
-            <primitive object={scene} />
-        </Bvh>
-    );
-};
+      meshBox.copy(mesh.geometry.boundingBox).applyMatrix4(relMatrix);
+      box.union(meshBox);
+    }
 
-const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
-  const obj = useLoader(OBJLoader, url);
-  const scene = useMemo(() => obj.clone(), [obj]);
-  return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
-};
+    const center = new Vector3();
+    const size = new Vector3();
+    if (!box.isEmpty()) {
+      box.getCenter(center);
+      box.getSize(size);
+      scene.position.set(-center.x, -center.y, -center.z + size.z / 2);
+    }
 
-const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
-  const geom = useLoader(STLLoader, url);
-  const mesh = useMemo(() => new Mesh(geom), [geom]);
-  return <SceneProcessor scene={mesh} modelId={id} color={color} isNativeYUp={false} />;
-};
+    updateModelDimensions(modelId, size.x, size.y, size.z);
+    invalidate();
 
-const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({ url, color, id }) => {
-  const object = useLoader(ThreeMFLoader, url);
-  const scene = useMemo(() => object.clone(), [object]);
-  return <SceneProcessor scene={scene} modelId={id} color={color} isNativeYUp={false} />;
-};
+    return () => {
+      for (const overlay of createdOverlays) {
+        overlay.parent?.remove(overlay);
+      }
+      wireframeMeshesRef.current = [];
+    };
+  }, [scene, sharedMaterial, wireframeMaterial, modelId, updateModelDimensions, invalidate]);
 
-const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
-  const extension = useMemo(() => modelData.file.name.split('.').pop()?.toLowerCase(), [modelData.file.name]);
+  useEffect(() => {
+    for (const overlay of wireframeMeshesRef.current) {
+      overlay.visible = isWireframeVisible;
+    }
+    invalidate();
+  }, [isWireframeVisible, invalidate]);
 
   return (
-     <group>
-        {extension === 'obj' && <ObjLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
-        {extension === 'stl' && <StlLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
-        {extension === '3mf' && <ThreeMFLoaded url={modelData.url} color={modelData.color} id={modelData.id} />}
-     </group>
+    <Bvh firstHitOnly>
+      <primitive object={scene} />
+    </Bvh>
   );
 };
 
-// --- Main Wrapper ---
+const disposeSceneGeometries = (root: Object3D) => {
+  root.traverse((child) => {
+    if ((child as Mesh).isMesh && !child.userData.isWireframeOverlay) {
+      (child as Mesh).geometry?.dispose();
+    }
+  });
+};
 
-export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData, index }) => {
-  // OPTIMIZATION: Use selective subscriptions to prevent re-renders of other models
-  // when one model moves.
+const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({
+  url,
+  color,
+  id,
+}) => {
+  const obj = useLoader(OBJLoader, url);
+  const scene = useMemo(() => obj.clone(), [obj]);
+
+  useEffect(() => {
+    return () => {
+      disposeSceneGeometries(scene);
+      useLoader.clear(OBJLoader, url);
+    };
+  }, [scene, url]);
+
+  return <SceneProcessor scene={scene} modelId={id} color={color} />;
+};
+
+const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({
+  url,
+  color,
+  id,
+}) => {
+  const geom = useLoader(STLLoader, url);
+  const mesh = useMemo(() => new Mesh(geom), [geom]);
+
+  useEffect(() => {
+    return () => {
+      geom.dispose();
+      useLoader.clear(STLLoader, url);
+    };
+  }, [geom, url]);
+
+  return <SceneProcessor scene={mesh} modelId={id} color={color} />;
+};
+
+const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({
+  url,
+  color,
+  id,
+}) => {
+  const object = useLoader(ThreeMFLoader, url);
+  const scene = useMemo(() => object.clone(), [object]);
+
+  useEffect(() => {
+    return () => {
+      disposeSceneGeometries(scene);
+      useLoader.clear(ThreeMFLoader, url);
+    };
+  }, [scene, url]);
+
+  return <SceneProcessor scene={scene} modelId={id} color={color} />;
+};
+
+const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
+  const extension = useMemo(
+    () => modelData.file.name.split('.').pop()?.toLowerCase(),
+    [modelData.file.name]
+  );
+
+  return (
+    <group>
+      {extension === 'obj' && (
+        <ObjLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
+      )}
+      {extension === 'stl' && (
+        <StlLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
+      )}
+      {extension === '3mf' && (
+        <ThreeMFLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
+      )}
+    </group>
+  );
+};
+
+export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
   const isSelected = useStore((state) => state.selectedModelId === modelData.id);
-  
-  const position = useStore((state) => state.modelPositions[modelData.id] || { x: 0, y: 0, z: 0 });
-  const rotation = useStore((state) => state.modelRotations[modelData.id] || { x: 0, y: 0, z: 0 });
-  const scale = useStore((state) => state.modelScales[modelData.id] || { x: 1, y: 1, z: 1 });
-  
-  // FIX: FLASH PREVENT
-  // We check if dimensions have been calculated for this model.
-  // If not, we hide the group. This prevents the model from flashing at 0,0,0 
-  // before the layout engine positions it.
+  const position = useStore((state) => state.modelPositions[modelData.id]);
+  const rotation = useStore((state) => state.modelRotations[modelData.id]);
+  const scale = useStore((state) => state.modelScales[modelData.id]);
   const dimensions = useStore((state) => state.modelDimensions[modelData.id]);
-  const isReady = !!dimensions;
+
+  const isReady = !!dimensions && !!position;
 
   const gizmoMode = useStore((state) => state.gizmoMode);
   const rotationSnap = useStore((state) => state.rotationSnap);
   const selectModel = useStore((state) => state.selectModel);
   const updateModelTransform = useStore((state) => state.updateModelTransform);
-  
-  // AR STATE
+
   const arGenerationRequest = useStore((state) => state.arGenerationRequest);
+  const clearArGenerationRequest = useStore((state) => state.clearArGenerationRequest);
   const setArModelUrl = useStore((state) => state.setArModelUrl);
 
   const [group, setGroup] = useState<Group | null>(null);
+  const transformControlsRef = useRef<TransformControlsImpl | null>(null);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     selectModel(modelData.id);
   };
 
-  // --- AR EXPORT LOGIC ---
+  // Sync TransformControls dragging completion reliably across mouse and touch.
+  useEffect(() => {
+    const controls = transformControlsRef.current as unknown as
+      | EventDispatcher<{ 'dragging-changed': { value: boolean } }>
+      | null;
+    if (!controls || !group) return;
+
+    const handleDraggingChanged = (event: { value: boolean }) => {
+      if (!event.value && group) {
+        updateModelTransform(modelData.id, {
+          position: { x: group.position.x, y: group.position.y, z: group.position.z },
+          rotation: { x: group.rotation.x, y: group.rotation.y, z: group.rotation.z },
+          scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z },
+        });
+      }
+    };
+
+    controls.addEventListener('dragging-changed', handleDraggingChanged);
+    return () => {
+      controls.removeEventListener('dragging-changed', handleDraggingChanged);
+    };
+  }, [group, isSelected, isReady, modelData.id, updateModelTransform]);
+
+  // AR GLB export
   useEffect(() => {
     if (!arGenerationRequest || !isSelected || !group) return;
 
-    // The timestamp changed, meaning a new request came in for the *selected* model.
+    clearArGenerationRequest();
     const exporter = new GLTFExporter();
-    
-    // Clone the current model state (geometry + materials + current local transforms)
     const modelClone = group.clone();
-    
-    // --- WRAPPER HIERARCHY ---
-    // 1. Units Wrapper: 
-    //    Scales everything by 0.001 to convert millimeters (Viewer) to meters (AR).
-    //    This applies to both the geometry size AND the position vector relative to origin.
+
+    // Strip wireframe overlays so they are never exported into AR.
+    const overlaysToRemove: Object3D[] = [];
+    modelClone.traverse((child) => {
+      if (child.userData.isWireframeOverlay) {
+        overlaysToRemove.push(child);
+      }
+    });
+    for (const overlay of overlaysToRemove) {
+      overlay.parent?.remove(overlay);
+    }
+
+    // Center the model at AR placement origin instead of retaining build-plate layout offsets.
+    modelClone.position.set(0, 0, 0);
+
+    // Millimeters (viewer) -> Meters (AR/glTF)
     const unitsWrapper = new Group();
-    unitsWrapper.scale.setScalar(0.001); 
+    unitsWrapper.scale.setScalar(0.001);
     unitsWrapper.add(modelClone);
 
-    // 2. Orientation Wrapper:
-    //    The viewer uses a Z-up coordinate system (camera.up = [0,0,1]).
-    //    Standard AR/glTF is Y-up.
-    //    We rotate -90 degrees around X to map Z-up data onto the Y-up world.
+    // Z-up (viewer) -> Y-up (AR/glTF)
     const orientationWrapper = new Group();
     orientationWrapper.rotation.x = -Math.PI / 2;
     orientationWrapper.add(unitsWrapper);
-    
-    // Update matrices before export to ensure transforms are baked correctly into the hierarchy
     orientationWrapper.updateMatrixWorld(true);
 
     exporter.parse(
-        orientationWrapper,
-        (gltf) => {
-            if (gltf instanceof ArrayBuffer) {
-                const blob = new Blob([gltf], { type: 'application/octet-stream' });
-                const url = URL.createObjectURL(blob);
-                setArModelUrl(url);
-            }
-        },
-        (error) => {
-            console.error('An error happened during GLTF export:', error);
-        },
-        { binary: true } // Create .glb
+      orientationWrapper,
+      (gltf) => {
+        if (gltf instanceof ArrayBuffer) {
+          const blob = new Blob([gltf], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          setArModelUrl(url);
+        }
+      },
+      (error) => {
+        console.error('An error happened during GLTF export:', error);
+      },
+      { binary: true }
     );
+  }, [arGenerationRequest, isSelected, group, clearArGenerationRequest, setArModelUrl]);
 
-  }, [arGenerationRequest]); // Only trigger when the timestamp updates
+  const posX = position?.x ?? 0;
+  const posY = position?.y ?? 0;
+  const posZ = position?.z ?? 0;
+  const rotX = rotation?.x ?? 0;
+  const rotY = rotation?.y ?? 0;
+  const rotZ = rotation?.z ?? 0;
+  const scaleX = scale?.x ?? 1;
+  const scaleY = scale?.y ?? 1;
+  const scaleZ = scale?.z ?? 1;
 
   return (
     <>
       {isSelected && group && isReady && (
-        <TransformControls 
-          object={group} 
-          mode={gizmoMode} 
+        <TransformControls
+          ref={transformControlsRef}
+          object={group}
+          mode={gizmoMode}
           enabled={true}
-          rotationSnap={rotationSnap} 
+          rotationSnap={rotationSnap ?? undefined}
           size={0.8}
           space="local"
-          // FIX: Changed from onObjectChange to onMouseUp.
-          // This prevents the "infinite loop" error by only updating
-          // the global store when the drag action is complete.
-          onMouseUp={() => {
-             if (!group) return;
-             updateModelTransform(modelData.id, {
-                 position: { x: group.position.x, y: group.position.y, z: group.position.z },
-                 rotation: { x: group.rotation.x, y: group.rotation.y, z: group.rotation.z },
-                 scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z }
-             });
-          }}
         />
       )}
-      <group 
+      <group
         ref={setGroup}
-        position={[position.x, position.y, position.z]}
-        rotation={[rotation.x, rotation.y, rotation.z]}
-        scale={[scale.x, scale.y, scale.z]}
+        position={[posX, posY, posZ]}
+        rotation={[rotX, rotY, rotZ]}
+        scale={[scaleX, scaleY, scaleZ]}
         onClick={handleClick}
-        onPointerMissed={() => {}}
         visible={isReady && modelData.visible}
       >
-         <InnerModel modelData={modelData} />
+        <InnerModel modelData={modelData} />
       </group>
     </>
   );

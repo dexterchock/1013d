@@ -1,90 +1,136 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ViewerState, DEFAULT_PPI, LoadedModel } from './types';
+import {
+  ViewerState,
+  DEFAULT_PPI,
+  MIN_PPI,
+  MAX_PPI,
+  LoadedModel,
+  Vec3,
+} from './types';
 
-// --- Helper Functions ---
+const VALID_EXTENSIONS = new Set(['obj', 'stl', '3mf']);
+const LAYOUT_GAP = 10;
 
 const generateModelColor = () => {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue}, 60%, 50%)`;
 };
 
-const LAYOUT_GAP = 10; 
+const getDefaultScreenSize = () => ({
+  width: typeof window !== 'undefined' ? window.screen.width : 1920,
+  height: typeof window !== 'undefined' ? window.screen.height : 1080,
+});
 
-// Helper to recalculate positions
-const calculatePositions = (
-  models: LoadedModel[], 
-  dimensions: Record<string, { x: number; y: number; z: number }>
-) => {
-  const positions: Record<string, { x: number; y: number; z: number }> = {};
-  let currentX = 0;
+/**
+ * Assigns initial X-axis positions to newly dimensioned models without
+ * overwriting any positions that already exist (including user drags).
+ */
+const layoutNewModels = (
+  models: LoadedModel[],
+  dimensions: Record<string, Vec3>,
+  existingPositions: Record<string, Vec3>,
+  scales: Record<string, Vec3>
+): Record<string, Vec3> => {
+  const nextPositions: Record<string, Vec3> = { ...existingPositions };
+  const newlyDimensioned: LoadedModel[] = [];
+  let hasPositionedModels = false;
+  let maxRightEdge = -Infinity;
 
-  models.forEach((model) => {
+  for (const model of models) {
     const dim = dimensions[model.id];
+    const existingPos = existingPositions[model.id];
 
-    // FIX: If dimensions are unknown (loading), ignore this model in the layout.
-    if (!dim) {
-        positions[model.id] = { x: 0, y: 0, z: 0 };
-        return; 
+    if (existingPos) {
+      hasPositionedModels = true;
+      if (dim) {
+        const scaleX = Math.abs(scales[model.id]?.x ?? 1);
+        const halfWidth = (dim.x * scaleX) / 2;
+        maxRightEdge = Math.max(maxRightEdge, existingPos.x + halfWidth);
+      }
+    } else if (dim) {
+      newlyDimensioned.push(model);
+    }
+  }
+
+  if (newlyDimensioned.length === 0) {
+    return nextPositions;
+  }
+
+  if (!hasPositionedModels) {
+    // Fresh plate: center the initial batch around X = 0.
+    let currentX = 0;
+    for (const model of newlyDimensioned) {
+      const dim = dimensions[model.id];
+      const scaleX = Math.abs(scales[model.id]?.x ?? 1);
+      const width = dim.x * scaleX;
+      nextPositions[model.id] = { x: currentX + width / 2, y: 0, z: 0 };
+      currentX += width + LAYOUT_GAP;
     }
 
-    const halfWidth = dim.x / 2;
-    const centerX = currentX + halfWidth;
-    
-    positions[model.id] = { x: centerX, y: 0, z: 0 };
-    currentX += dim.x + LAYOUT_GAP;
-  });
-
-  const totalWidth = currentX - LAYOUT_GAP;
-  const shiftX = currentX > 0 ? -totalWidth / 2 : 0;
-  
-  Object.keys(positions).forEach(key => {
-    if (dimensions[key]) {
-        positions[key].x += shiftX;
+    const totalWidth = currentX - LAYOUT_GAP;
+    const shiftX = totalWidth > 0 ? -totalWidth / 2 : 0;
+    for (const model of newlyDimensioned) {
+      nextPositions[model.id] = {
+        ...nextPositions[model.id],
+        x: nextPositions[model.id].x + shiftX,
+      };
     }
-  });
+    return nextPositions;
+  }
 
-  return positions;
+  // Append newly loaded models to the right of existing ones.
+  let cursorX = Number.isFinite(maxRightEdge) ? maxRightEdge + LAYOUT_GAP : 0;
+  for (const model of newlyDimensioned) {
+    const dim = dimensions[model.id];
+    const scaleX = Math.abs(scales[model.id]?.x ?? 1);
+    const width = dim.x * scaleX;
+    nextPositions[model.id] = { x: cursorX + width / 2, y: 0, z: 0 };
+    cursorX += width + LAYOUT_GAP;
+  }
+
+  return nextPositions;
 };
 
-// --- Debounce Variables for Dimension Updates ---
-let dimensionUpdateTimer: any = null;
-let pendingDimensionUpdates: Record<string, { x: number; y: number; z: number }> = {};
+// Debounce state for batching simultaneous model dimension updates.
+let dimensionUpdateTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingDimensionUpdates: Record<string, Vec3> = {};
 
-// --- Store Implementation ---
-
-interface ArState {
-    isArSupported: boolean;
-    arGenerationRequest: number | null; // Timestamp to trigger generation
-    arModelUrl: string | null; // The blob URL
-    setArSupported: (supported: boolean) => void;
-    triggerArGeneration: () => void;
-    setArModelUrl: (url: string | null) => void;
+export interface ArState {
+  isArSupported: boolean;
+  arGenerationRequest: number | null;
+  arModelUrl: string | null;
+  setArSupported: (supported: boolean) => void;
+  triggerArGeneration: () => void;
+  clearArGenerationRequest: () => void;
+  setArModelUrl: (url: string | null) => void;
 }
+
+const initialScreen = getDefaultScreenSize();
 
 export const useStore = create<ViewerState & ArState>()(
   persist(
     (set, get) => ({
-      // Initial State
       models: [],
       selectedModelId: null,
       ppi: DEFAULT_PPI,
       isGridVisible: true,
+      isWireframeVisible: false,
       gizmoMode: 'translate',
-      rotationSnap: Math.PI / 4, // Default 45 degrees
+      rotationSnap: Math.PI / 4,
       sidebarOpen: true,
       is1to1Mode: false,
       isCalibrationModalOpen: false,
-      
-      // AR State
+      uploadError: null,
+
       isArSupported: false,
       arGenerationRequest: null,
       arModelUrl: null,
 
       calibrationSettings: {
-          resolutionWidth: window.screen.width,
-          resolutionHeight: window.screen.height,
-          diagonalInches: 24
+        resolutionWidth: initialScreen.width,
+        resolutionHeight: initialScreen.height,
+        diagonalInches: 24,
       },
 
       modelDimensions: {},
@@ -92,187 +138,219 @@ export const useStore = create<ViewerState & ArState>()(
       modelRotations: {},
       modelScales: {},
 
-      // Actions
-      addModels: (files, isInternal = false) => {
-        const validExtensions = ['obj', 'stl', '3mf'];
-        
-        const validFiles = files.filter((file) => {
-            const ext = file.name.split('.').pop()?.toLowerCase();
-            return ext && validExtensions.includes(ext);
-        });
+      addModels: (files) => {
+        const validFiles: File[] = [];
+        const rejectedNames: string[] = [];
 
-        if (validFiles.length === 0) return;
+        for (const file of files) {
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          if (ext && VALID_EXTENSIONS.has(ext)) {
+            validFiles.push(file);
+          } else {
+            rejectedNames.push(file.name);
+          }
+        }
+
+        const uploadError =
+          rejectedNames.length > 0
+            ? `Unsupported format (${rejectedNames.join(', ')}). Use .obj, .stl, or .3mf.`
+            : null;
+
+        if (validFiles.length === 0) {
+          if (uploadError) set({ uploadError });
+          return;
+        }
 
         const newModels: LoadedModel[] = validFiles.map((file) => ({
           id: crypto.randomUUID(),
           file,
           url: URL.createObjectURL(file),
-          color: generateModelColor(), 
+          color: generateModelColor(),
           visible: true,
         }));
-        
+
         set((state) => {
           const updatedModels = [...state.models, ...newModels];
-          
           const newRotations = { ...state.modelRotations };
           const newScales = { ...state.modelScales };
-          newModels.forEach(m => {
-              newRotations[m.id] = { x: 0, y: 0, z: 0 };
-              newScales[m.id] = { x: 1, y: 1, z: 1 };
-          });
 
-          return { 
+          for (const model of newModels) {
+            newRotations[model.id] = { x: 0, y: 0, z: 0 };
+            newScales[model.id] = { x: 1, y: 1, z: 1 };
+          }
+
+          return {
             models: updatedModels,
-            selectedModelId: newModels.length > 0 ? newModels[newModels.length - 1].id : state.selectedModelId,
-            modelPositions: calculatePositions(updatedModels, state.modelDimensions),
+            selectedModelId: newModels[newModels.length - 1].id,
             modelRotations: newRotations,
-            modelScales: newScales
+            modelScales: newScales,
+            uploadError,
           };
         });
       },
 
       addExampleModel: async () => {
         try {
-            const { cubeData } = await import('./cubeData');
-            const blob = new Blob([cubeData], { type: 'application/octet-stream' });
-            const file = new File([blob], 'Calibration_cube.stl', { 
-                type: 'application/octet-stream' 
-            });
-            get().addModels([file], true);
+          const { cubeData } = await import('./cubeData');
+          const blob = new Blob([cubeData], { type: 'application/octet-stream' });
+          const file = new File([blob], 'Calibration_cube.stl', {
+            type: 'application/octet-stream',
+          });
+          get().addModels([file]);
         } catch (error) {
-            console.error("Error loading embedded example model:", error);
+          console.error('Error loading embedded example model:', error);
+          set({ uploadError: 'Failed to load example model.' });
         }
       },
 
       removeModel: (id) => {
+        // Drop any queued dimension updates for this model before the debounce fires.
+        delete pendingDimensionUpdates[id];
+
         set((state) => {
           const model = state.models.find((m) => m.id === id);
           if (model) URL.revokeObjectURL(model.url);
-          
+
           const newModels = state.models.filter((m) => m.id !== id);
-          
-          // Clean up associated state maps
-          const { [id]: removedDim, ...remainingDimensions } = state.modelDimensions;
-          const { [id]: removedRot, ...remainingRotations } = state.modelRotations;
-          const { [id]: removedScale, ...remainingScales } = state.modelScales;
-          const { [id]: removedPos, ...remainingPositions } = state.modelPositions;
-          
-          return { 
+          const { [id]: _dim, ...remainingDimensions } = state.modelDimensions;
+          const { [id]: _rot, ...remainingRotations } = state.modelRotations;
+          const { [id]: _scale, ...remainingScales } = state.modelScales;
+          const { [id]: _pos, ...remainingPositions } = state.modelPositions;
+
+          return {
             models: newModels,
             selectedModelId: state.selectedModelId === id ? null : state.selectedModelId,
             modelDimensions: remainingDimensions,
             modelRotations: remainingRotations,
             modelScales: remainingScales,
-            modelPositions: calculatePositions(newModels, remainingDimensions)
+            modelPositions: remainingPositions,
           };
         });
       },
 
-      selectModel: (id) => set({ 
-        selectedModelId: id,
-      }),
+      selectModel: (id) => set({ selectedModelId: id }),
 
       setPPI: (ppi) => {
-        if (typeof ppi === 'number' && isFinite(ppi) && ppi > 0) {
-            set({ ppi });
+        if (typeof ppi === 'number' && Number.isFinite(ppi) && ppi > 0) {
+          const clamped = Math.min(MAX_PPI, Math.max(MIN_PPI, ppi));
+          set({ ppi: clamped });
         }
       },
 
-      setCalibrationSettings: (settings) => set((state) => ({
-        calibrationSettings: { ...state.calibrationSettings, ...settings }
-      })),
+      setCalibrationSettings: (settings) =>
+        set((state) => ({
+          calibrationSettings: { ...state.calibrationSettings, ...settings },
+        })),
 
       toggleGrid: () => set((state) => ({ isGridVisible: !state.isGridVisible })),
-      
+
+      toggleWireframe: () => set((state) => ({ isWireframeVisible: !state.isWireframeVisible })),
+
       setGizmoMode: (mode) => set({ gizmoMode: mode }),
-      
-      setRotationSnap: (angleDeg) => set({ 
-        rotationSnap: angleDeg ? angleDeg * (Math.PI / 180) : null 
-      }),
+
+      setRotationSnap: (angleDeg) =>
+        set({
+          rotationSnap: angleDeg ? angleDeg * (Math.PI / 180) : null,
+        }),
 
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      
+
       set1to1Mode: (is1to1) => set({ is1to1Mode: is1to1 }),
-      
+
       setCalibrationModalOpen: (isOpen) => set({ isCalibrationModalOpen: isOpen }),
 
+      clearUploadError: () => set({ uploadError: null }),
+
       updateModelDimensions: (id, x, y, z) => {
-        // Debounce Logic: 
-        // 1. Accumulate updates
         pendingDimensionUpdates[id] = { x, y, z };
 
-        // 2. Clear previous timer
         if (dimensionUpdateTimer) clearTimeout(dimensionUpdateTimer);
 
-        // 3. Set new timer (50ms buffer)
         dimensionUpdateTimer = setTimeout(() => {
-             set((state) => {
-                 // Merge accumulated updates with current state
-                 const newDimensions = {
-                     ...state.modelDimensions,
-                     ...pendingDimensionUpdates
-                 };
+          dimensionUpdateTimer = null;
+          set((state) => {
+            const activeIds = new Set(state.models.map((m) => m.id));
+            const validUpdates: Record<string, Vec3> = {};
 
-                 // Calculate positions based on the new aggregated set of dimensions
-                 const newPositions = calculatePositions(state.models, newDimensions);
+            for (const [modelId, dim] of Object.entries(pendingDimensionUpdates)) {
+              if (activeIds.has(modelId)) {
+                validUpdates[modelId] = dim;
+              }
+            }
+            pendingDimensionUpdates = {};
 
-                 // Clear buffer
-                 pendingDimensionUpdates = {};
+            if (Object.keys(validUpdates).length === 0) {
+              return {};
+            }
 
-                 return {
-                     modelDimensions: newDimensions,
-                     modelPositions: newPositions
-                 };
-             });
+            const newDimensions = {
+              ...state.modelDimensions,
+              ...validUpdates,
+            };
+
+            const newPositions = layoutNewModels(
+              state.models,
+              newDimensions,
+              state.modelPositions,
+              state.modelScales
+            );
+
+            return {
+              modelDimensions: newDimensions,
+              modelPositions: newPositions,
+            };
+          });
         }, 50);
       },
 
       updateModelTransform: (id, transform) => {
-          set((state) => {
-              const updates: Partial<ViewerState> = {};
-              if (transform.position) {
-                  updates.modelPositions = { ...state.modelPositions, [id]: transform.position };
-              }
-              if (transform.rotation) {
-                  updates.modelRotations = { ...state.modelRotations, [id]: transform.rotation };
-              }
-              if (transform.scale) {
-                  updates.modelScales = { ...state.modelScales, [id]: transform.scale };
-              }
-              return updates;
-          });
+        set((state) => {
+          const updates: Partial<ViewerState> = {};
+          if (transform.position) {
+            updates.modelPositions = { ...state.modelPositions, [id]: transform.position };
+          }
+          if (transform.rotation) {
+            updates.modelRotations = { ...state.modelRotations, [id]: transform.rotation };
+          }
+          if (transform.scale) {
+            updates.modelScales = { ...state.modelScales, [id]: transform.scale };
+          }
+          return updates;
+        });
       },
 
-      // AR Actions
       setArSupported: (supported) => set({ isArSupported: supported }),
       triggerArGeneration: () => set({ arGenerationRequest: Date.now() }),
-      
-      // CLEANUP: Revoke the old Blob URL before setting the new one to prevent memory leaks
-      setArModelUrl: (url) => set((state) => {
-          if (state.arModelUrl) {
-              URL.revokeObjectURL(state.arModelUrl);
+      clearArGenerationRequest: () => set({ arGenerationRequest: null }),
+
+      setArModelUrl: (url) =>
+        set((state) => {
+          if (state.arModelUrl && state.arModelUrl !== url) {
+            URL.revokeObjectURL(state.arModelUrl);
           }
           return { arModelUrl: url };
-      }),
+        }),
     }),
     {
-      name: '1to13d-storage', 
-      partialize: (state) => ({ 
-          ppi: state.ppi,
-          calibrationSettings: {
-              diagonalInches: state.calibrationSettings.diagonalInches
-          }
-      }), 
-      merge: (persistedState: any, currentState) => {
+      name: '1to13d-storage',
+      partialize: (state) => ({
+        ppi: state.ppi,
+        calibrationSettings: {
+          diagonalInches: state.calibrationSettings.diagonalInches,
+        },
+      }),
+      merge: (persistedState: unknown, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<ViewerState>;
+        const screen = getDefaultScreenSize();
         return {
-            ...currentState,
-            ...persistedState,
-            calibrationSettings: {
-                ...currentState.calibrationSettings, 
-                ...(persistedState.calibrationSettings || {}), 
-                resolutionWidth: window.screen.width,
-                resolutionHeight: window.screen.height,
-            }
+          ...currentState,
+          ...persisted,
+          calibrationSettings: {
+            ...currentState.calibrationSettings,
+            ...(persisted.calibrationSettings || {}),
+            resolutionWidth: screen.width,
+            resolutionHeight: screen.height,
+          },
         };
       },
     }
