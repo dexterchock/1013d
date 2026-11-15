@@ -7,7 +7,7 @@ export const ChevronUp: React.FC = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="3"
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
@@ -22,7 +22,7 @@ export const ChevronDown: React.FC = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="3"
+    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
@@ -37,11 +37,11 @@ export const InfoIcon: React.FC = () => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.5"
+    strokeWidth="1.9"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="9.5" />
     <path d="M12 16v-4" />
     <path d="M12 8h.01" />
   </svg>
@@ -49,65 +49,70 @@ export const InfoIcon: React.FC = () => (
 
 export const MoveIcon: React.FC = () => (
   <svg
-    width="14"
-    height="14"
+    width="15"
+    height="15"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.5"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M9 19l3 3 3-3M2 12h20M12 2v20" />
+    <path d="M5.5 9.5L3 12l2.5 2.5" />
+    <path d="M18.5 9.5L21 12l-2.5 2.5" />
+    <path d="M9.5 5.5L12 3l2.5 2.5" />
+    <path d="M9.5 18.5L12 21l2.5-2.5" />
+    <path d="M3.5 12h17" />
+    <path d="M12 3.5v17" />
   </svg>
 );
 
 export const RotateIcon: React.FC = () => (
   <svg
-    width="14"
-    height="14"
+    width="15"
+    height="15"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.5"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M21.5 2v6h-6M21.34 5.5A10 10 0 1 1 11.26 2.05" />
+    <path d="M21 3v5.5h-5.5" />
+    <path d="M20.75 8.5A9.25 9.25 0 1 0 19.6 16.5" />
   </svg>
 );
 
 export const MagnetIcon: React.FC = () => (
   <svg
-    width="14"
-    height="14"
+    width="15"
+    height="15"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.5"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
-    <path d="M6 10v4a6 6 0 1 0 12 0v-4" />
-    <path d="M6 6h12" />
+    <path d="M5.5 4.5h3.75v7.25a2.75 2.75 0 0 0 5.5 0V4.5h3.75v7.25a6.5 6.5 0 0 1-13 0V4.5z" />
+    <path d="M5.5 8.25h3.75" />
+    <path d="M14.75 8.25h3.75" />
   </svg>
 );
 
 export const WireframeIcon: React.FC = () => (
   <svg
-    width="14"
-    height="14"
+    width="15"
+    height="15"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2.2"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M12 2l8.5 5v10L12 22l-8.5-5V7L12 2z" />
-    <path d="M12 22V12" />
-    <path d="M20.5 7L12 12 3.5 7" />
-    <path d="M3.5 17L12 12l8.5 5" />
+    <path d="M12 2.75L20 7.35v9.3L12 21.25l-8-4.6v-9.3L12 2.75z" />
+    <path d="M4 7.35L12 12l8-4.65" />
+    <path d="M12 21.25V12" />
   </svg>
 );

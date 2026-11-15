@@ -107,7 +107,7 @@ export const CalibrationModal: React.FC = () => {
                 Manual Calibration
               </span>
               <h2 className="text-white text-xl font-medium">Standard Credit Card</h2>
-              <p className="text-white/60 text-sm max-w-sm mx-auto leading-relaxed">
+              <p className="text-white/80 text-sm max-w-sm mx-auto leading-relaxed">
                 Place your physical card against the screen. <br />
                 <span className="text-blue-300 block mt-2 font-medium">
                   Mobile users: Match the{' '}
@@ -126,7 +126,7 @@ export const CalibrationModal: React.FC = () => {
                 <div className="w-[1px] bg-white/30 absolute top-0 bottom-0 left-1/2 -translate-x-1/2" />
                 <div className="w-2 h-[1px] bg-white/30 absolute top-0 left-1/2 -translate-x-1/2" />
                 <div className="w-2 h-[1px] bg-white/30 absolute bottom-0 left-1/2 -translate-x-1/2" />
-                <span className="bg-black text-white/70 px-1 py-0.5 text-[9px] font-mono -rotate-90 whitespace-nowrap z-10 rounded border border-white/10">
+                <span className="bg-black text-white/85 px-1 py-0.5 text-[9px] font-mono -rotate-90 whitespace-nowrap z-10 rounded border border-white/15">
                   53.98 mm
                 </span>
               </div>
@@ -164,7 +164,7 @@ export const CalibrationModal: React.FC = () => {
                   <div className="h-[1px] bg-white/30 absolute left-0 right-0 top-1/2" />
                   <div className="h-[5px] bg-white/30 absolute left-0 top-0 bottom-0" />
                   <div className="h-[5px] bg-white/30 absolute right-0 top-0 bottom-0" />
-                  <span className="bg-black text-white/70 px-2 text-[10px] font-mono relative z-10">
+                  <span className="bg-black text-white/85 px-2 text-[10px] font-mono relative z-10">
                     85.60 mm
                   </span>
                 </div>
@@ -176,7 +176,7 @@ export const CalibrationModal: React.FC = () => {
           <div className="w-full max-w-2xl px-6">
             <LiquidContainer className="p-6 flex flex-col gap-4">
               <div className="flex items-center gap-4">
-                <span className="text-xs font-mono text-white/40">50</span>
+                <span className="text-xs font-mono text-white/70">50</span>
                 <input
                   id="ppi-slider"
                   name="ppi-slider"
@@ -193,14 +193,14 @@ export const CalibrationModal: React.FC = () => {
                   }}
                   className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
-                <span className="text-xs font-mono text-white/40">400</span>
+                <span className="text-xs font-mono text-white/70">400</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <label
                     htmlFor="ppi-value-input"
-                    className="text-xs text-white/40 uppercase tracking-widest mb-1"
+                    className="text-xs text-white/70 uppercase tracking-widest mb-1"
                   >
                     Current Density
                   </label>
@@ -219,7 +219,7 @@ export const CalibrationModal: React.FC = () => {
                       step="0.1"
                       className="bg-transparent text-2xl font-bold font-mono text-blue-400 outline-none w-32 border-b border-white/10 focus:border-blue-400 transition-colors py-0 leading-none"
                     />
-                    <span className="text-xs text-white/40">PPI</span>
+                    <span className="text-xs text-white/70">PPI</span>
                   </div>
                 </div>
 

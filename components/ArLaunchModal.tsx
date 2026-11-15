@@ -63,21 +63,23 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
           <button
             type="button"
             onClick={closeArSession}
-            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+            className="hover-pop-btn p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10"
             aria-label="Close AR launcher"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
+            <span className="hover-pop-icon">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </span>
           </button>
         </div>
 
@@ -89,7 +91,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
             />
             <div>
               <p className="text-sm font-medium text-white">Preparing 1:1 AR Model...</p>
-              <p className="text-xs text-white/50 mt-1">
+              <p className="text-xs text-white/75 mt-1">
                 Converting geometry to true physical scale.
               </p>
             </div>
@@ -98,13 +100,13 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
 
         {arStatus === 'ready' && arUsdzUrl && (
           <div className="space-y-3">
-            <p className="text-xs text-white/60 leading-relaxed">
+            <p className="text-xs text-white/80 leading-relaxed">
               Your model is ready in physical 1:1 scale. Tap below to launch Apple AR Quick Look.
             </p>
 
             {/* WebKit requires <a rel="ar"> to have a single <img> child activated by a direct user tap */}
-            <div className="relative h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition-colors shadow-[0_0_24px_rgba(37,99,235,0.4)] flex items-center justify-center overflow-hidden">
-              <span className="pointer-events-none select-none text-sm font-semibold text-white tracking-wide">
+            <div className="hover-pop-btn relative h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-[0_0_24px_rgba(37,99,235,0.4)] flex items-center justify-center overflow-hidden">
+              <span className="hover-pop-label pointer-events-none select-none text-sm font-semibold text-white tracking-wide">
                 Open in AR Quick Look
               </span>
               <a
@@ -123,13 +125,13 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
             </div>
 
             {thirdPartyIos ? (
-              <p className="text-[11px] text-amber-300/90 leading-relaxed">
+              <p className="text-[11px] text-amber-300/95 leading-relaxed">
                 This iOS browser uses an embedded view where Apple Quick Look may download the{' '}
-                <code className="text-white/90">.usdz</code> file instead of opening automatically.
+                <code className="text-white">.usdz</code> file instead of opening automatically.
                 Open this page in Safari for instant inline AR.
               </p>
             ) : (
-              <p className="text-[11px] text-white/45 text-center">
+              <p className="text-[11px] text-white/70 text-center">
                 Tap Done in the top corner of Quick Look when finished to return here.
               </p>
             )}
@@ -138,15 +140,15 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
 
         {arStatus === 'ready' && !arUsdzUrl && arModelUrl && (
           <div className="space-y-3">
-            <p className="text-xs text-white/60 leading-relaxed">
+            <p className="text-xs text-white/80 leading-relaxed">
               Your 1:1 model is ready for Augmented Reality placement.
             </p>
             <button
               type="button"
               onClick={onLaunchWebAr}
-              className="h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 transition-colors text-sm font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+              className="hover-pop-btn h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-sm font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.4)]"
             >
-              Launch AR Viewer
+              <span className="hover-pop-label">Launch AR Viewer</span>
             </button>
           </div>
         )}

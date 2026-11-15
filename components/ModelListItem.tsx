@@ -59,7 +59,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
           className="w-3 h-3 rounded-full shadow-sm shrink-0"
           style={{ backgroundColor: model.color }}
         />
-        <span className={`text-sm truncate flex-1 ${isSelected ? 'text-white' : 'text-white/80'}`}>
+        <span className={`text-sm truncate flex-1 ${isSelected ? 'text-white font-medium' : 'text-white/90'}`}>
           {model.file.name}
         </span>
         <button
@@ -67,7 +67,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
             e.stopPropagation();
             removeModel(model.id);
           }}
-          className="text-white/20 hover:text-red-400 px-2 transition-colors"
+          className="hover-pop-btn text-white/60 hover:text-red-400 px-2"
           aria-label={`Remove model ${model.file.name}`}
         >
           ×
@@ -92,7 +92,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
             <div className="space-y-3">
               {/* Position */}
               <div>
-                <span className="text-[9px] text-white/30 uppercase mb-1 block">
+                <span className="text-[9px] text-white/65 uppercase mb-1 block">
                   Position (mm)
                 </span>
                 <div className="grid grid-cols-3 gap-1">
@@ -119,7 +119,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
 
               {/* Rotation */}
               <div>
-                <span className="text-[9px] text-white/30 uppercase mb-1 block">
+                <span className="text-[9px] text-white/65 uppercase mb-1 block">
                   Rotation (deg)
                 </span>
                 <div className="grid grid-cols-3 gap-1">
@@ -146,7 +146,7 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
 
               {/* Dimension (mm) */}
               <div>
-                <span className="text-[9px] text-white/30 uppercase mb-1 block">
+                <span className="text-[9px] text-white/65 uppercase mb-1 block">
                   Dimension (mm)
                 </span>
                 <div className="grid grid-cols-3 gap-1">

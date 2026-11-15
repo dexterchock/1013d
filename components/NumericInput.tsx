@@ -82,8 +82,8 @@ export const NumericInput: React.FC<NumericInputProps> = ({
           w-full border rounded px-2 py-1 text-xs
           ${
             readOnly
-              ? 'bg-white/5 border-transparent text-white/50 cursor-not-allowed select-none'
-              : 'bg-white/5 border-white/10 text-white placeholder-white/20 focus:border-white/30 outline-none'
+              ? 'bg-white/5 border-transparent text-white/75 cursor-not-allowed select-none'
+              : 'bg-white/5 border-white/15 text-white placeholder-white/50 focus:border-white/40 outline-none'
           }
         `}
       />
@@ -92,7 +92,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
 
   return (
     <label className="flex items-center gap-2 bg-black/20 rounded px-2 py-1 border border-white/5 focus-within:border-white/20 transition-colors duration-200 cursor-text">
-      {label && <span className="text-[10px] font-mono text-white/40 w-2">{label}</span>}
+      {label && <span className="text-[10px] font-mono text-white/70 w-2">{label}</span>}
       <input
         ref={inputRef}
         id={id}

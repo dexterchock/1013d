@@ -148,7 +148,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
                       showAbout
                         ? 'bg-white/20 text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                        : 'bg-white/5 hover:bg-white/10 text-white/85 hover:text-white'
                     }`}
                     aria-label="About 1013D"
                   >
@@ -157,7 +157,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 )}
                 <button
                   onClick={toggleSidebar}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                  className="hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/85 hover:text-white"
                   aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 >
                   {sidebarOpen ? <ChevronUp /> : <ChevronDown />}
@@ -182,12 +182,12 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'
                 }`}
               >
-                <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs leading-relaxed text-white/70">
+                <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-xs leading-relaxed text-white/85">
                   <p className="mb-2">
                     A 3D viewer to inspect and scale models in true 1:1 dimensions using
                     display PPI or card calibration.
                   </p>
-                  <div className="flex items-center gap-2 text-white/40 font-mono text-[10px] uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-white/65 font-mono text-[10px] uppercase tracking-wider">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                     <span>
                       Creator:{' '}
@@ -208,23 +208,23 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
                 <button
                   onClick={() => setActiveTab('models')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-md ${
                     activeTab === 'models'
                       ? 'bg-white/10 text-white shadow-sm'
-                      : 'text-white/40 hover:text-white/80'
+                      : 'text-white/75 hover:text-white'
                   }`}
                 >
-                  Models
+                  <span className="hover-pop-label">Models</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('calibration')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-md ${
                     activeTab === 'calibration'
                       ? 'bg-white/10 text-white shadow-sm'
-                      : 'text-white/40 hover:text-white/80'
+                      : 'text-white/75 hover:text-white'
                   }`}
                 >
-                  Calibration
+                  <span className="hover-pop-label">Calibration</span>
                 </button>
               </div>
 
@@ -233,10 +233,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 <div className="flex flex-col transition-opacity duration-300">
                   <div className="mb-4 shrink-0">
                     <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                      <span className="text-sm text-white/50 group-hover:text-white">
+                      <span className="text-sm text-white/85 group-hover:text-white">
                         Drag &amp; Drop or Click
                       </span>
-                      <span className="text-xs text-white/30 mt-1">.obj, .stl, .3mf</span>
+                      <span className="text-xs text-white/65 mt-1">.obj, .stl, .3mf</span>
                       <input
                         id="file-upload"
                         name="file-upload"
@@ -267,13 +267,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   )}
 
                   <div className="flex-1 overflow-y-auto no-scrollbar mb-2 max-h-[50vh]">
-                    <h2 className="text-xs font-mono uppercase text-white/40 mb-2">
+                    <h2 className="text-xs font-mono uppercase text-white/70 mb-2">
                       Active Models
                     </h2>
                     <div className="space-y-2">
                       {models.length === 0 && (
                         <div className="flex flex-col items-center gap-2 p-2">
-                          <div className="text-sm text-white/20 italic">No models loaded.</div>
+                          <div className="text-sm text-white/60 italic">No models loaded.</div>
                           <button
                             onClick={() => void addExampleModel()}
                             className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
@@ -293,39 +293,39 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               {/* TAB CONTENT: CALIBRATION */}
               {activeTab === 'calibration' && (
                 <div className="flex flex-col transition-opacity duration-300 pb-1">
-                  <p className="text-xs text-white/60 mb-4 leading-relaxed">
+                  <p className="text-xs text-white/80 mb-4 leading-relaxed">
                     For true 1:1 scale, the app needs to know your specific pixel density
                     (PPI).
                   </p>
 
                   {/* Calculator Section */}
                   <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
-                    <h2 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
+                    <h2 className="text-xs font-bold text-white/90 mb-3 uppercase tracking-wider">
                       Auto Calculate
                     </h2>
 
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
-                        <label className="text-[10px] text-white/40 block mb-1">Width</label>
-                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                        <label className="text-[10px] text-white/70 block mb-1">Width</label>
+                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/80 font-mono border border-transparent">
                           {resolutionWidth} px
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] text-white/40 block mb-1">Height</label>
-                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/50 font-mono border border-transparent">
+                        <label className="text-[10px] text-white/70 block mb-1">Height</label>
+                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/80 font-mono border border-transparent">
                           {resolutionHeight} px
                         </div>
                       </div>
                     </div>
-                    <p className="text-[10px] text-white/30 italic mb-2 leading-tight">
+                    <p className="text-[10px] text-white/65 italic mb-2 leading-tight">
                       * Logical resolution detected (OS scaling applied).
                     </p>
 
                     <div className="mb-3">
                       <label
                         htmlFor="monitor-size"
-                        className="text-[10px] text-white/40 block mb-1"
+                        className="text-[10px] text-white/70 block mb-1"
                       >
                         Diagonal Size (Inches)
                       </label>
@@ -351,10 +351,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
                   {/* Manual Calibration Trigger */}
                   <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
-                    <h2 className="text-xs font-bold text-white/80 mb-3 uppercase tracking-wider">
+                    <h2 className="text-xs font-bold text-white/90 mb-3 uppercase tracking-wider">
                       Manual Adjustment
                     </h2>
-                    <p className="text-[10px] text-white/40 mb-3">
+                    <p className="text-[10px] text-white/70 mb-3">
                       Use a physical credit card to calibrate the scale precisely.
                     </p>
 
@@ -362,7 +362,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                       <span className="text-xl font-bold font-mono text-blue-400">
                         {ppi.toFixed(1)}
                       </span>
-                      <span className="text-[10px] text-white/40 ml-1">PPI</span>
+                      <span className="text-[10px] text-white/70 ml-1">PPI</span>
                     </div>
 
                     <LiquidButton
