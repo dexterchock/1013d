@@ -194,14 +194,14 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     display PPI or card calibration.
                   </p>
                   <div className="flex items-center gap-2 text-white/70 font-mono text-[10px] uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     <span className="leading-none">
                       Creator:{' '}
                       <a
                         href="https://www.instagram.com/dexterchock/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover-pop-btn inline-flex items-center hover:text-white cursor-pointer border-b border-transparent hover:border-white/50"
+                        className="hover-pop-btn inline-flex items-center hover:text-blue-400 cursor-pointer border-b border-transparent hover:border-blue-400/30"
                       >
                         <span className="hover-pop-label">Dexter Chock</span>
                       </a>
@@ -284,7 +284,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                           <div className="text-sm text-white/65 italic">No models loaded.</div>
                           <button
                             onClick={() => void addExampleModel()}
-                            className="hover-pop-btn text-xs text-white/90 hover:text-white underline underline-offset-2"
+                            className="hover-pop-btn text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2"
                           >
                             <span className="hover-pop-label">Try Example</span>
                           </button>
@@ -367,7 +367,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     </p>
 
                     <div className="flex items-baseline justify-center gap-1.5 mb-4">
-                      <span className="text-xl font-bold font-mono text-white">
+                      <span className="text-xl font-bold font-mono text-blue-400">
                         {ppi.toFixed(1)}
                       </span>
                       <span className="text-[10px] text-white/75">PPI</span>
@@ -375,7 +375,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
                     <LiquidButton
                       onClick={() => setCalibrationModalOpen(true)}
-                      className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
+                      className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
                     >
                       Open Manual Calibration
                     </LiquidButton>
