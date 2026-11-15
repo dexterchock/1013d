@@ -1,0 +1,40 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "1013D",
+    "identifier": "did:web:1013d.pages.dev"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:1013d.pages.dev:skill:scale-3d-viewer",
+      "displayName": "1013D 1:1 Scale 3D & AR Viewer",
+      "type": "application/agent-skills+md",
+      "url": "https://1013d.pages.dev/.well-known/agent-skill.md",
+      "description": "Free client-side browser 3D model viewer for inspecting STL, OBJ, and 3MF files at exact 1:1 real-world physical scale using monitor PPI or credit card calibration, wireframe overlay, and mobile AR export.",
+      "capabilities": [
+        "1:1-physical-scale",
+        "ppi-calibration",
+        "credit-card-calibration",
+        "stl-obj-3mf-viewer",
+        "wireframe-overlay",
+        "ar-export"
+      ],
+      "tags": [
+        "3d-viewer",
+        "3d-printing",
+        "stl",
+        "obj",
+        "3mf",
+        "1-to-1-scale",
+        "real-world-scale",
+        "ar-viewer"
+      ],
+      "representativeQueries": [
+        "how to view a 3D STL model at 1:1 real-world size in the browser",
+        "check true physical dimensions of an OBJ or 3MF file on screen",
+        "calibrate monitor PPI with a credit card to preview a 3D print 1:1",
+        "preview an STL file in mobile AR without uploading files to a server"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# 1013D
+
+> Free client-side 3D model viewer for inspecting STL, OBJ, and 3MF files at exact 1:1 real-world physical scale in any web browser, with screen PPI calibration, ISO/IEC 7810 ID-1 credit-card calibration, wireframe overlay, and mobile AR preview.
+
+1013D runs entirely in the browser with no account required and no file uploads to a remote server. Users who want to verify whether a 3D print, enclosure, or CAD part matches real-world physical dimensions can hold a physical object or credit card up to their calibrated screen or place the model in their space with Augmented Reality.
+
+## Documentation & Discovery
+
+- [1013D Web App](https://1013d.pages.dev/): Launch the interactive 1:1 physical scale 3D and AR viewer directly in the browser.
+- [Agent Skill Guide](https://1013d.pages.dev/.well-known/agent-skill.md): Structured capability reference, supported formats, 1:1 calibration workflow, and viewer controls for AI assistants.
+- [Agentic Resource Discovery Manifest](https://1013d.pages.dev/.well-known/ard.json): Machine-readable ARD catalog (`urn:air:1013d.pages.dev:skill:scale-3d-viewer`) with representative user queries.
+- [Web App Manifest](https://1013d.pages.dev/manifest.json): Progressive Web App metadata for 1013D.
+
+## Core Capabilities
+
+- **True 1:1 Real-World Scale**: Computes true millimeter-to-pixel zoom on any monitor or mobile display using diagonal size + logical resolution or manual ISO/IEC 7810 ID-1 (85.60 mm x 53.98 mm) credit-card calibration.
+- **Browser-Native Format Support**: Parses `.stl` (binary and ASCII), `.obj`, and `.3mf` meshes locally in WebGL/Three.js with complete file privacy.
+- **Inspection & Alignment**: Switch orthogonal `X` / `Y` / `Z` views, toggle a wireframe overlay on top of shaded models, translate or rotate parts with 15-degree snap, and inspect live millimeter dimensions.
+- **Zero-Install Mobile AR**: Exports models on demand to GLB/USDZ for iOS AR Quick Look, Android Scene Viewer, and WebXR.
+
+## Optional
+
+- [Source Code on GitHub](https://github.com/dexterchock/1013d): Open-source repository for 1013D.
+- [Creator Profile](https://www.instagram.com/dexterchock/): Dexter Chock on Instagram.

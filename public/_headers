@@ -5,6 +5,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Cache-Control: public, max-age=0, must-revalidate
+  Link: </.well-known/ard.json>; rel="ard"
 
 # 2. Vite Assets
 /assets/*
@@ -36,3 +37,11 @@
   Cache-Control: public, max-age=0, must-revalidate
 /robots.txt
   Cache-Control: public, max-age=0, must-revalidate
+
+# 6. Agentic Discovery & LLM Files
+/llms.txt
+  Cache-Control: public, max-age=0, must-revalidate
+  Access-Control-Allow-Origin: *
+/.well-known/*
+  Cache-Control: public, max-age=0, must-revalidate
+  Access-Control-Allow-Origin: *
