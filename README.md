@@ -10,8 +10,6 @@
 
 **Inspect 3D models at their true 1:1 physical size directly in your browser.**
 
-[**Launch 1013D**](https://1013d.pages.dev/)
-
 </div>
 
 ## Overview
