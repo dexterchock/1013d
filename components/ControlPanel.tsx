@@ -3,7 +3,7 @@ import type { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer, LiquidButton } from './LiquidContainer';
 import { AnimatedLogo } from './AnimatedLogo';
-import { ChevronDown, ChevronUp, InfoIcon } from './Icons';
+import { ChevronDown, ChevronUp, CloseIcon, InfoIcon } from './Icons';
 import { NumericInput } from './NumericInput';
 import { ModelListItem } from './ModelListItem';
 import { BottomPill } from './BottomPill';
@@ -74,7 +74,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         container.style.height = '56px';
         return;
       }
-      const height = Math.ceil(entry.contentRect.height) + 32;
+      const height = Math.ceil(entry.contentRect.height) + 34;
       container.style.height = `${height}px`;
     });
 
@@ -110,14 +110,14 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         ref={containerRef}
         className={`
           absolute left-4 top-4
-          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden rounded-3xl
-          ${sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
+          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden
+          ${sidebarOpen ? 'w-80 rounded-3xl' : 'w-[8.5rem] rounded-[28px]'}
         `}
         style={{ maxHeight: '90vh' }}
       >
         <LiquidContainer
-          className={`h-full flex flex-col relative overflow-hidden rounded-3xl transition-all duration-700 ${
-            sidebarOpen ? 'p-4' : 'p-2'
+          className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${
+            sidebarOpen ? 'p-4 rounded-3xl' : 'p-[11px] rounded-[28px]'
           }`}
         >
           <div
@@ -128,7 +128,11 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           >
             <div ref={innerRef} className="flex flex-col shrink-0">
               {/* Header */}
-            <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-1 mb-0">
+            <div
+              className={`flex justify-between items-center shrink-0 h-8 mb-0 ${
+                sidebarOpen ? 'px-0' : 'pl-1.5 pr-0'
+              }`}
+            >
               <h1 className="m-0 leading-none flex items-center">
                 <button
                   type="button"
@@ -266,10 +270,12 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                       <button
                         type="button"
                         onClick={clearUploadError}
-                        className="hover-pop-btn text-red-300/80 hover:text-red-100 leading-none px-1"
+                        className="hover-pop-btn w-6 h-6 flex items-center justify-center rounded-full text-red-300/80 hover:text-red-100 hover:bg-red-500/20 shrink-0"
                         aria-label="Dismiss error"
                       >
-                        <span className="hover-pop-label leading-none">×</span>
+                        <span className="hover-pop-icon">
+                          <CloseIcon />
+                        </span>
                       </button>
                     </div>
                   )}

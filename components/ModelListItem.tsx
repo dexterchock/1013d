@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
+import { CloseIcon } from './Icons';
 import { NumericInput } from './NumericInput';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 };
@@ -74,7 +75,9 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
           className="hover-pop-btn w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-white/65 hover:text-red-400 shrink-0"
           aria-label={`Remove model ${model.file.name}`}
         >
-          <span className="hover-pop-label leading-none text-base">×</span>
+          <span className="hover-pop-icon">
+            <CloseIcon />
+          </span>
         </button>
       </div>
 

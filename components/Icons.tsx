@@ -2,48 +2,63 @@ import React from 'react';
 
 export const ChevronUp: React.FC = () => (
   <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="1.65"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M18 15l-6-6-6 6" />
+    <path d="M4.5 9.75L8 6.25l3.5 3.5" />
   </svg>
 );
 
 export const ChevronDown: React.FC = () => (
   <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="1.65"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M6 9l6 6 6-6" />
+    <path d="M4.5 6.25L8 9.75l3.5-3.5" />
   </svg>
 );
 
 export const InfoIcon: React.FC = () => (
   <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.9"
+    strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <circle cx="12" cy="12" r="9.5" />
-    <path d="M12 16v-4" />
-    <path d="M12 8h.01" />
+    <circle cx="8" cy="8" r="6" />
+    <path d="M8 7.5v3.5" />
+    <circle cx="8" cy="5.25" r="0.85" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const CloseIcon: React.FC = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M4.25 4.25l7.5 7.5M11.75 4.25l-7.5 7.5" />
   </svg>
 );
 

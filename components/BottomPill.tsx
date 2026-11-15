@@ -182,7 +182,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
         <button
           onClick={handle1to1Click}
           className={`
-            hover-pop-btn shrink-0 h-8 sm:h-9 px-3.5 sm:px-5 rounded-full flex items-center justify-center leading-none
+            hover-pop-btn shrink-0 h-8 sm:h-9 w-10 sm:w-11 rounded-full flex items-center justify-center leading-none
             text-xs font-sans font-semibold tracking-wider
             ${
               is1to1Mode
