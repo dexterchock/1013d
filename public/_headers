@@ -25,7 +25,7 @@
 /web-app-manifest-512x512.png
   Cache-Control: public, max-age=31536000, immutable
 /og-image.jpg
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600, must-revalidate
 
 # 4. Web App Manifest (Recommended: No Long Cache)
 # This ensures icon/theme updates trigger for installed PWA users
