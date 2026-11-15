@@ -103,15 +103,15 @@ export const CalibrationModal: React.FC = () => {
           {/* Top Content (Header + Card) */}
           <div className="flex flex-col items-center justify-center w-full max-w-4xl px-4 mb-8">
             <div className="flex flex-col items-center gap-2 mb-10 text-center">
-              <span className="text-blue-400 font-mono text-xs uppercase tracking-[0.15em] font-bold">
+              <span className="text-white/90 font-mono text-xs uppercase tracking-[0.15em] font-bold">
                 Manual Calibration
               </span>
               <h2 className="text-white text-xl font-medium">Standard Credit Card</h2>
               <p className="text-white/80 text-sm max-w-sm mx-auto leading-relaxed">
                 Place your physical card against the screen. <br />
-                <span className="text-blue-300 block mt-2 font-medium">
+                <span className="text-white block mt-2 font-medium">
                   Mobile users: Match the{' '}
-                  <span className="underline decoration-blue-300/50 underline-offset-4">
+                  <span className="underline decoration-white/50 underline-offset-4">
                     height
                   </span>{' '}
                   (top &amp; bottom edges).
@@ -191,7 +191,7 @@ export const CalibrationModal: React.FC = () => {
                     setPPI(next);
                     setInputValue(next.toFixed(1));
                   }}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white"
                 />
                 <span className="text-xs font-mono text-white/70">400</span>
               </div>
@@ -217,7 +217,7 @@ export const CalibrationModal: React.FC = () => {
                       onChange={handleInputChange}
                       onBlur={handleBlur}
                       step="0.1"
-                      className="bg-transparent text-2xl font-bold font-mono text-blue-400 outline-none w-32 border-b border-white/10 focus:border-blue-400 transition-colors py-0 leading-none"
+                      className="bg-transparent text-2xl font-bold font-mono text-white outline-none w-32 border-b border-white/15 focus:border-white transition-colors py-0 leading-none"
                     />
                     <span className="text-xs text-white/70">PPI</span>
                   </div>

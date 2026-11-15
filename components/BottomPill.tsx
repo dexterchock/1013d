@@ -41,22 +41,22 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
 
   return (
     <div className="absolute bottom-8 md:bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-1rem)] pointer-events-auto">
-      <LiquidContainer className="flex items-center gap-0.5 p-1 rounded-full overflow-hidden">
+      <LiquidContainer className="flex items-center gap-0 p-1 rounded-full overflow-hidden">
         {/* Axis Views Group */}
         <div className="flex items-center gap-0.5">
           {(['X', 'Y', 'Z'] as const).map((axis) => (
             <button
               key={axis}
               onClick={() => handleAxisClick(axis)}
-              className="hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center text-[13px] font-sans font-medium tracking-wide text-white/85 hover:text-white hover:bg-white/10"
+              className="hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center leading-none text-[13px] font-sans font-medium tracking-wide text-white/90 hover:text-white hover:bg-white/10"
               aria-label={`View ${axis} axis`}
             >
-              <span className="hover-pop-label">{axis}</span>
+              <span className="hover-pop-label leading-none">{axis}</span>
             </button>
           ))}
         </div>
 
-        <span className="h-4 w-px shrink-0 bg-white/15 mx-0.5 sm:mx-1" aria-hidden="true" />
+        <span className="h-4 w-px shrink-0 bg-white/15 mx-1.5 sm:mx-2" aria-hidden="true" />
 
         {/* View Mode + Wireframe Overlay Toggle */}
         <button
@@ -65,8 +65,8 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
             ${
               isWireframeVisible
-                ? 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-                : 'text-white/85 hover:text-white hover:bg-white/10'
+                ? 'liquid-chip-active'
+                : 'text-white/90 hover:text-white hover:bg-white/10'
             }
           `}
           title={isWireframeVisible ? 'Shaded View' : 'Shaded + Wireframe'}
@@ -82,20 +82,20 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
         <div
           className={`
             flex items-center overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
-            ${showModelTools ? 'max-w-[12rem] opacity-100' : 'max-w-0 opacity-0'}
+            ${showModelTools ? 'max-w-[13rem] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}
           `}
         >
-          <span className="h-4 w-px shrink-0 bg-white/15 mx-0.5 sm:mx-1" aria-hidden="true" />
+          <span className="h-4 w-px shrink-0 bg-white/15 mx-1.5 sm:mx-2" aria-hidden="true" />
 
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center">
             <button
               onClick={() => setGizmoMode('translate')}
               className={`
                 hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
                 ${
                   gizmoMode === 'translate'
-                    ? 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-                    : 'text-white/85 hover:text-white hover:bg-white/10'
+                    ? 'liquid-chip-active'
+                    : 'text-white/90 hover:text-white hover:bg-white/10'
                 }
               `}
               title="Move"
@@ -109,11 +109,11 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             <button
               onClick={() => setGizmoMode('rotate')}
               className={`
-                hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
+                hover-pop-btn shrink-0 ml-0.5 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
                 ${
                   gizmoMode === 'rotate'
-                    ? 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-                    : 'text-white/85 hover:text-white hover:bg-white/10'
+                    ? 'liquid-chip-active'
+                    : 'text-white/90 hover:text-white hover:bg-white/10'
                 }
               `}
               title="Rotate"
@@ -128,7 +128,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             <div
               className={`
                 flex items-center overflow-hidden transition-all duration-300 ease-out
-                ${showSnap ? 'w-8 sm:w-9 opacity-100' : 'w-0 opacity-0'}
+                ${showSnap ? 'w-8 sm:w-9 ml-0.5 opacity-100' : 'w-0 ml-0 opacity-0 pointer-events-none'}
               `}
             >
               <button
@@ -137,8 +137,8 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
                   hover-pop-btn shrink-0 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
                   ${
                     rotationSnap !== null
-                      ? 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]'
-                      : 'text-white/85 hover:text-white hover:bg-white/10'
+                      ? 'liquid-chip-active'
+                      : 'text-white/90 hover:text-white hover:bg-white/10'
                   }
                 `}
                 title="Snap"
@@ -156,43 +156,43 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
         <div
           className={`
             flex items-center overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
-            ${showAR ? 'max-w-[4.5rem] opacity-100' : 'max-w-0 opacity-0'}
+            ${showAR ? 'max-w-[5.5rem] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}
           `}
         >
-          <span className="h-4 w-px shrink-0 bg-white/15 mx-0.5 sm:mx-1" aria-hidden="true" />
+          <span className="h-4 w-px shrink-0 bg-white/15 mx-1.5 sm:mx-2" aria-hidden="true" />
           <button
             type="button"
             onClick={triggerArGeneration}
             disabled={arStatus === 'preparing'}
-            className={`hover-pop-btn shrink-0 h-8 sm:h-9 w-9 sm:w-11 rounded-full flex items-center justify-center text-xs font-sans font-semibold tracking-wider ${
+            className={`hover-pop-btn shrink-0 h-8 sm:h-9 w-9 sm:w-11 rounded-full flex items-center justify-center leading-none text-xs font-sans font-semibold tracking-wider ${
               arStatus !== 'idle'
-                ? 'text-blue-300 bg-blue-500/20 shadow-[inset_0_0_0_1px_rgba(96,165,250,0.35)]'
-                : 'text-white/85 hover:text-white hover:bg-white/10'
+                ? 'liquid-chip-active'
+                : 'text-white/90 hover:text-white hover:bg-white/10'
             }`}
             title="View in AR"
             aria-label="View Augmented Reality"
           >
-            <span className="hover-pop-label">AR</span>
+            <span className="hover-pop-label leading-none">AR</span>
           </button>
         </div>
 
-        <span className="h-4 w-px shrink-0 bg-white/15 mx-0.5 sm:mx-1" aria-hidden="true" />
+        <span className="h-4 w-px shrink-0 bg-white/15 mx-1.5 sm:mx-2" aria-hidden="true" />
 
         {/* 1:1 Button - End Cap */}
         <button
           onClick={handle1to1Click}
           className={`
-            hover-pop-btn shrink-0 h-8 sm:h-9 px-3.5 sm:px-5 rounded-full flex items-center justify-center
+            hover-pop-btn shrink-0 h-8 sm:h-9 px-3.5 sm:px-5 rounded-full flex items-center justify-center leading-none
             text-xs font-sans font-semibold tracking-wider
             ${
               is1to1Mode
-                ? 'bg-blue-600 text-white shadow-[0_0_16px_rgba(37,99,235,0.45),inset_0_1px_0_rgba(255,255,255,0.28)]'
-                : 'bg-transparent text-white/85 hover:bg-white/10 hover:text-white'
+                ? 'bg-white text-black shadow-[0_0_18px_rgba(255,255,255,0.28)]'
+                : 'bg-transparent text-white/90 hover:bg-white/10 hover:text-white'
             }
           `}
           aria-label="1:1 real world scale"
         >
-          <span className="hover-pop-label">1:1</span>
+          <span className="hover-pop-label leading-none">1:1</span>
         </button>
       </LiquidContainer>
     </div>

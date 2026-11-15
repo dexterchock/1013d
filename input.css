@@ -22,26 +22,22 @@
     scrollbar-width: none;
   }
 
-  /* Optical liquid-glass surface adapted for #050505 OLED dark mode */
+  /* Clear Apple-style Liquid Glass on #050505 OLED black (pure monochrome, zero blue shift) */
   .liquid-lens {
     position: relative;
-    background: linear-gradient(
-      145deg,
-      rgba(24, 24, 29, 0.84) 0%,
-      rgba(11, 11, 15, 0.80) 100%
-    );
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
-    backdrop-filter: blur(28px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(18, 18, 18, 0.24);
+    -webkit-backdrop-filter: blur(18px) brightness(1.08);
+    backdrop-filter: blur(18px) brightness(1.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow:
-      0 14px 36px -6px rgba(0, 0, 0, 0.82),
-      0 0 0 0.5px rgba(255, 255, 255, 0.06),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
-      inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-      inset 1px 0 0 0 rgba(255, 255, 255, 0.12),
-      inset -1px 0 0 0 rgba(255, 255, 255, 0.06);
+      0 14px 36px -6px rgba(0, 0, 0, 0.72),
+      0 2px 8px rgba(0, 0, 0, 0.45),
+      inset 0 1px 2px rgba(255, 255, 255, 0.22),
+      inset 0 -1px 2px rgba(255, 255, 255, 0.07),
+      inset 0 0 18px rgba(255, 255, 255, 0.03);
   }
 
+  /* Curved corner specular glass rim (strongest on arcs, fading softly along flat sides) */
   .liquid-lens::before {
     content: "";
     position: absolute;
@@ -49,36 +45,55 @@
     border-radius: inherit;
     pointer-events: none;
     z-index: 3;
+    padding: 1.25px;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0.04) 36%,
-      transparent 62%,
-      rgba(255, 255, 255, 0.08) 100%
+      rgba(255, 255, 255, 0.56) 0%,
+      rgba(255, 255, 255, 0.16) 22%,
+      rgba(255, 255, 255, 0.03) 48%,
+      rgba(255, 255, 255, 0.06) 76%,
+      rgba(255, 255, 255, 0.32) 100%
     );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    padding: 1px;
   }
 
+  /* Soft concentric inner meniscus cushion + optical diagonal sheen */
   .liquid-lens::after {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: 3px;
     border-radius: inherit;
     pointer-events: none;
     z-index: 3;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.09) 0%,
+      rgba(255, 255, 255, 0.015) 28%,
+      transparent 54%,
+      rgba(255, 255, 255, 0.035) 100%
+    );
     box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
-      inset 0 -1px 0 0 rgba(255, 255, 255, 0.06);
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.16),
+      inset 0 -1px 1.5px rgba(255, 255, 255, 0.06);
   }
 
   .liquid-lens > * {
     position: relative;
     z-index: 2;
+  }
+
+  .liquid-chip-active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.34),
+      inset 0 -1px 1px rgba(255, 255, 255, 0.08),
+      0 2px 8px rgba(0, 0, 0, 0.28);
   }
 
   .hover-pop-btn {
@@ -96,7 +111,8 @@
 
   .hover-pop-label,
   .hover-pop-icon,
-  .hover-pop-btn > svg {
+  .hover-pop-btn > svg,
+  .hover-pop-soft-label {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -107,18 +123,21 @@
 
   @media (hover: hover) and (pointer: fine) {
     .liquid-lens:hover {
-      border-color: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.14);
       box-shadow:
-        0 18px 42px -6px rgba(0, 0, 0, 0.88),
-        0 0 0 0.5px rgba(255, 255, 255, 0.1),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.30),
-        inset 0 -1px 0 0 rgba(255, 255, 255, 0.10),
-        inset 1px 0 0 0 rgba(255, 255, 255, 0.16),
-        inset -1px 0 0 0 rgba(255, 255, 255, 0.08);
+        0 18px 42px -6px rgba(0, 0, 0, 0.78),
+        0 2px 10px rgba(0, 0, 0, 0.5),
+        inset 0 1px 2px rgba(255, 255, 255, 0.28),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.09),
+        inset 0 0 20px rgba(255, 255, 255, 0.04);
     }
 
     .hover-pop-btn:hover .hover-pop-label {
       transform: scale(1.12);
+    }
+
+    .hover-pop-btn:hover .hover-pop-soft-label {
+      transform: scale(1.04);
     }
 
     .hover-pop-btn:hover .hover-pop-icon,

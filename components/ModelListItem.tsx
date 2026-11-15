@@ -49,28 +49,32 @@ export const ModelListItem: React.FC<{ model: LoadedModel }> = ({ model }) => {
         flex flex-col rounded-lg border cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden
         ${
           isSelected
-            ? 'bg-black/40 border-white/10 shadow-lg'
-            : 'bg-white/5 border-white/5 hover:border-white/20'
+            ? 'bg-white/[0.08] border-white/25 shadow-lg'
+            : 'bg-white/[0.03] border-white/10 hover:border-white/25'
         }
       `}
     >
-      <div className="flex items-center gap-3 p-2 shrink-0">
-        <div
-          className="w-3 h-3 rounded-full shadow-sm shrink-0"
-          style={{ backgroundColor: model.color }}
-        />
-        <span className={`text-sm truncate flex-1 ${isSelected ? 'text-white font-medium' : 'text-white/90'}`}>
-          {model.file.name}
-        </span>
+      <div className="flex items-center justify-between gap-2 px-2.5 py-2 shrink-0">
+        <div className="hover-pop-btn flex items-center gap-2.5 flex-1 min-w-0">
+          <span className="hover-pop-soft-label flex items-center gap-2.5 min-w-0 origin-left">
+            <span
+              className="w-3 h-3 rounded-full shadow-sm shrink-0"
+              style={{ backgroundColor: model.color }}
+            />
+            <span className={`text-sm truncate leading-none ${isSelected ? 'text-white font-medium' : 'text-white/90'}`}>
+              {model.file.name}
+            </span>
+          </span>
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
             removeModel(model.id);
           }}
-          className="hover-pop-btn text-white/60 hover:text-red-400 px-2"
+          className="hover-pop-btn w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-white/65 hover:text-red-400 shrink-0"
           aria-label={`Remove model ${model.file.name}`}
         >
-          ×
+          <span className="hover-pop-label leading-none text-base">×</span>
         </button>
       </div>
 

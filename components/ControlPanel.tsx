@@ -110,13 +110,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         ref={containerRef}
         className={`
           absolute left-4 top-4
-          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden rounded-2xl
+          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden rounded-3xl
           ${sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
         `}
         style={{ maxHeight: '90vh' }}
       >
         <LiquidContainer
-          className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${
+          className={`h-full flex flex-col relative overflow-hidden rounded-3xl transition-all duration-700 ${
             sidebarOpen ? 'p-4' : 'p-2'
           }`}
         >
@@ -128,39 +128,45 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
           >
             <div ref={innerRef} className="flex flex-col shrink-0">
               {/* Header */}
-            <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-0.5 mb-0">
-              <h1 className="m-0 leading-none">
+            <div className="flex justify-between items-center shrink-0 h-10 pl-2 pr-1 mb-0">
+              <h1 className="m-0 leading-none flex items-center">
                 <button
                   type="button"
-                  className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
+                  className="hover-pop-btn flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
                   onClick={toggleSidebar}
                   aria-label="1013D, toggle sidebar"
                 >
                   <span className="sr-only">1013D</span>
-                  <AnimatedLogo />
+                  <span className="hover-pop-label inline-flex items-center">
+                    <AnimatedLogo />
+                  </span>
                 </button>
               </h1>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {sidebarOpen && (
                   <button
                     onClick={() => setShowAbout((prev) => !prev)}
-                    className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    className={`hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full ${
                       showAbout
-                        ? 'bg-white/20 text-white'
-                        : 'bg-white/5 hover:bg-white/10 text-white/85 hover:text-white'
+                        ? 'liquid-chip-active'
+                        : 'bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white'
                     }`}
                     aria-label="About 1013D"
                   >
-                    <InfoIcon />
+                    <span className="hover-pop-icon">
+                      <InfoIcon />
+                    </span>
                   </button>
                 )}
                 <button
                   onClick={toggleSidebar}
-                  className="hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/85 hover:text-white"
+                  className="hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white"
                   aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 >
-                  {sidebarOpen ? <ChevronUp /> : <ChevronDown />}
+                  <span className="hover-pop-icon">
+                    {sidebarOpen ? <ChevronUp /> : <ChevronDown />}
+                  </span>
                 </button>
               </div>
             </div>
@@ -182,22 +188,22 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   showAbout ? 'max-h-40 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'
                 }`}
               >
-                <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-xs leading-relaxed text-white/85">
+                <div className="p-3 bg-white/[0.04] rounded-xl border border-white/10 text-xs leading-relaxed text-white/85">
                   <p className="mb-2">
                     A 3D viewer to inspect and scale models in true 1:1 dimensions using
                     display PPI or card calibration.
                   </p>
-                  <div className="flex items-center gap-2 text-white/65 font-mono text-[10px] uppercase tracking-wider">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>
+                  <div className="flex items-center gap-2 text-white/70 font-mono text-[10px] uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />
+                    <span className="leading-none">
                       Creator:{' '}
                       <a
                         href="https://www.instagram.com/dexterchock/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hover:text-blue-400 transition-colors cursor-pointer border-b border-transparent hover:border-blue-400/30"
+                        className="hover-pop-btn inline-flex items-center hover:text-white cursor-pointer border-b border-transparent hover:border-white/50"
                       >
-                        Dexter Chock
+                        <span className="hover-pop-label">Dexter Chock</span>
                       </a>
                     </span>
                   </div>
@@ -205,26 +211,26 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               </div>
 
               {/* Tabs */}
-              <div className="flex p-1 bg-white/5 rounded-lg mb-4 shrink-0">
+              <div className="flex items-center p-1 bg-white/[0.04] rounded-xl border border-white/10 mb-4 shrink-0">
                 <button
                   onClick={() => setActiveTab('models')}
-                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-md ${
+                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center leading-none ${
                     activeTab === 'models'
-                      ? 'bg-white/10 text-white shadow-sm'
+                      ? 'liquid-chip-active'
                       : 'text-white/75 hover:text-white'
                   }`}
                 >
-                  <span className="hover-pop-label">Models</span>
+                  <span className="hover-pop-label leading-none">Models</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('calibration')}
-                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-md ${
+                  className={`hover-pop-btn flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center leading-none ${
                     activeTab === 'calibration'
-                      ? 'bg-white/10 text-white shadow-sm'
+                      ? 'liquid-chip-active'
                       : 'text-white/75 hover:text-white'
                   }`}
                 >
-                  <span className="hover-pop-label">Calibration</span>
+                  <span className="hover-pop-label leading-none">Calibration</span>
                 </button>
               </div>
 
@@ -232,11 +238,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               {activeTab === 'models' && (
                 <div className="flex flex-col transition-opacity duration-300">
                   <div className="mb-4 shrink-0">
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                      <span className="text-sm text-white/85 group-hover:text-white">
-                        Drag &amp; Drop or Click
+                    <label className="hover-pop-btn flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/[0.06] hover:border-white/35 cursor-pointer group">
+                      <span className="hover-pop-soft-label flex flex-col items-center">
+                        <span className="text-sm text-white/90 group-hover:text-white">
+                          Drag &amp; Drop or Click
+                        </span>
+                        <span className="text-xs text-white/65 mt-1">.obj, .stl, .3mf</span>
                       </span>
-                      <span className="text-xs text-white/65 mt-1">.obj, .stl, .3mf</span>
                       <input
                         id="file-upload"
                         name="file-upload"
@@ -252,33 +260,33 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   {uploadError && (
                     <div
                       role="alert"
-                      className="mb-3 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-[11px] text-red-200 flex items-start justify-between gap-2"
+                      className="mb-3 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-[11px] text-red-200 flex items-center justify-between gap-2"
                     >
                       <span>{uploadError}</span>
                       <button
                         type="button"
                         onClick={clearUploadError}
-                        className="text-red-300/70 hover:text-red-100 leading-none"
+                        className="hover-pop-btn text-red-300/80 hover:text-red-100 leading-none px-1"
                         aria-label="Dismiss error"
                       >
-                        ×
+                        <span className="hover-pop-label leading-none">×</span>
                       </button>
                     </div>
                   )}
 
                   <div className="flex-1 overflow-y-auto no-scrollbar mb-2 max-h-[50vh]">
-                    <h2 className="text-xs font-mono uppercase text-white/70 mb-2">
+                    <h2 className="text-xs font-mono uppercase text-white/75 mb-2">
                       Active Models
                     </h2>
                     <div className="space-y-2">
                       {models.length === 0 && (
                         <div className="flex flex-col items-center gap-2 p-2">
-                          <div className="text-sm text-white/60 italic">No models loaded.</div>
+                          <div className="text-sm text-white/65 italic">No models loaded.</div>
                           <button
                             onClick={() => void addExampleModel()}
-                            className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                            className="hover-pop-btn text-xs text-white/90 hover:text-white underline underline-offset-2"
                           >
-                            Try Example
+                            <span className="hover-pop-label">Try Example</span>
                           </button>
                         </div>
                       )}
@@ -299,7 +307,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                   </p>
 
                   {/* Calculator Section */}
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 mb-6 shrink-0">
+                  <div className="bg-white/[0.04] p-3 rounded-xl border border-white/10 mb-5 shrink-0">
                     <h2 className="text-xs font-bold text-white/90 mb-3 uppercase tracking-wider">
                       Auto Calculate
                     </h2>
@@ -307,13 +315,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
                         <label className="text-[10px] text-white/70 block mb-1">Width</label>
-                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/80 font-mono border border-transparent">
+                        <div className="w-full h-7 flex items-center bg-white/[0.05] rounded px-2 text-xs text-white/85 font-mono border border-white/5">
                           {resolutionWidth} px
                         </div>
                       </div>
                       <div>
                         <label className="text-[10px] text-white/70 block mb-1">Height</label>
-                        <div className="w-full bg-white/5 rounded px-2 py-1 text-xs text-white/80 font-mono border border-transparent">
+                        <div className="w-full h-7 flex items-center bg-white/[0.05] rounded px-2 text-xs text-white/85 font-mono border border-white/5">
                           {resolutionHeight} px
                         </div>
                       </div>
@@ -343,14 +351,14 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
 
                     <LiquidButton
                       onClick={calculatePPI}
-                      className="w-full !py-1 !text-xs bg-white/10 hover:bg-white/20"
+                      className="w-full !py-1.5 !text-xs bg-white/10 hover:bg-white/20 border-white/15"
                     >
                       Calculate PPI
                     </LiquidButton>
                   </div>
 
                   {/* Manual Calibration Trigger */}
-                  <div className="bg-black/20 p-3 rounded-xl border border-white/5 shrink-0">
+                  <div className="bg-white/[0.04] p-3 rounded-xl border border-white/10 shrink-0">
                     <h2 className="text-xs font-bold text-white/90 mb-3 uppercase tracking-wider">
                       Manual Adjustment
                     </h2>
@@ -358,16 +366,16 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                       Use a physical credit card to calibrate the scale precisely.
                     </p>
 
-                    <div className="text-center mb-4">
-                      <span className="text-xl font-bold font-mono text-blue-400">
+                    <div className="flex items-baseline justify-center gap-1.5 mb-4">
+                      <span className="text-xl font-bold font-mono text-white">
                         {ppi.toFixed(1)}
                       </span>
-                      <span className="text-[10px] text-white/70 ml-1">PPI</span>
+                      <span className="text-[10px] text-white/75">PPI</span>
                     </div>
 
                     <LiquidButton
                       onClick={() => setCalibrationModalOpen(true)}
-                      className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-200 border-blue-500/30"
+                      className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
                     >
                       Open Manual Calibration
                     </LiquidButton>

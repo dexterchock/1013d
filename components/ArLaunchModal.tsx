@@ -55,7 +55,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
       <LiquidContainer className="w-full max-w-sm rounded-2xl p-5 shadow-2xl border border-white/15">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-6 px-2 items-center rounded-md bg-blue-500/20 text-blue-300 text-[11px] font-bold tracking-wider">
+            <span className="inline-flex h-6 px-2 items-center rounded-md bg-white/15 text-white border border-white/20 text-[11px] font-bold tracking-wider">
               AR 1:1
             </span>
             <h2 className="text-sm font-semibold text-white">View in Your Space</h2>
@@ -86,7 +86,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
         {arStatus === 'preparing' && (
           <div className="py-4 flex flex-col items-center text-center gap-3">
             <div
-              className="w-8 h-8 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin"
+              className="w-8 h-8 rounded-full border-2 border-white/25 border-t-white animate-spin"
               aria-hidden="true"
             />
             <div>
@@ -105,8 +105,8 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
             </p>
 
             {/* WebKit requires <a rel="ar"> to have a single <img> child activated by a direct user tap */}
-            <div className="hover-pop-btn relative h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-[0_0_24px_rgba(37,99,235,0.4)] flex items-center justify-center overflow-hidden">
-              <span className="hover-pop-label pointer-events-none select-none text-sm font-semibold text-white tracking-wide">
+            <div className="hover-pop-btn relative h-12 w-full rounded-xl bg-white hover:bg-white/90 active:bg-white/80 shadow-[0_0_24px_rgba(255,255,255,0.2)] flex items-center justify-center overflow-hidden">
+              <span className="hover-pop-label pointer-events-none select-none text-sm font-semibold text-black tracking-wide">
                 Open in AR Quick Look
               </span>
               <a
@@ -146,7 +146,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
             <button
               type="button"
               onClick={onLaunchWebAr}
-              className="hover-pop-btn h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-sm font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+              className="hover-pop-btn h-12 w-full rounded-xl bg-white hover:bg-white/90 active:bg-white/80 text-sm font-semibold text-black shadow-[0_0_24px_rgba(255,255,255,0.2)]"
             >
               <span className="hover-pop-label">Launch AR Viewer</span>
             </button>
@@ -162,16 +162,16 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
               <button
                 type="button"
                 onClick={triggerArGeneration}
-                className="flex-1 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white transition-colors"
+                className="hover-pop-btn flex-1 h-10 rounded-xl bg-white hover:bg-white/90 text-xs font-semibold text-black"
               >
-                Try Again
+                <span className="hover-pop-label">Try Again</span>
               </button>
               <button
                 type="button"
                 onClick={closeArSession}
-                className="flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white/80 transition-colors"
+                className="hover-pop-btn flex-1 h-10 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white/90"
               >
-                Close
+                <span className="hover-pop-label">Close</span>
               </button>
             </div>
           </div>

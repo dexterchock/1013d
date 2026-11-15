@@ -176,23 +176,23 @@ function App() {
 
   return (
     <main
-      className="w-screen h-[100dvh] relative bg-neutral-900 selection:bg-blue-500/30 font-sans overflow-hidden"
+      className="w-screen h-[100dvh] relative bg-[#050505] selection:bg-white/20 font-sans overflow-hidden"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] to-[#000000] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#080808] to-[#000000] pointer-events-none" />
 
       {/* Drag Overlay Feedback */}
       <div
         className={`
-          absolute inset-4 z-[200] border-2 border-dashed border-blue-500/50 bg-black/60 backdrop-blur-sm rounded-2xl
+          absolute inset-4 z-[200] border-2 border-dashed border-white/40 bg-black/60 backdrop-blur-sm rounded-2xl
           flex items-center justify-center pointer-events-none transition-opacity duration-300
           ${isDragging ? 'opacity-100' : 'opacity-0'}
         `}
       >
-        <div className="text-blue-400 font-mono text-xl tracking-widest uppercase animate-pulse">
+        <div className="text-white/90 font-mono text-xl tracking-widest uppercase animate-pulse">
           Drop Files to Import
         </div>
       </div>

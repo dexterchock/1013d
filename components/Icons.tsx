@@ -78,8 +78,8 @@ export const RotateIcon: React.FC = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M21 3v5.5h-5.5" />
-    <path d="M20.75 8.5A9.25 9.25 0 1 0 19.6 16.5" />
+    <path d="M20.5 4v5h-5" />
+    <path d="M20.25 9A8.75 8.75 0 1 0 19 16.5" />
   </svg>
 );
 
@@ -94,9 +94,9 @@ export const MagnetIcon: React.FC = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M5.5 4.5h3.75v7.25a2.75 2.75 0 0 0 5.5 0V4.5h3.75v7.25a6.5 6.5 0 0 1-13 0V4.5z" />
-    <path d="M5.5 8.25h3.75" />
-    <path d="M14.75 8.25h3.75" />
+    <path d="M5.5 5h3.75v7.25a2.75 2.75 0 0 0 5.5 0V5h3.75v7.25a6.5 6.5 0 0 1-13 0V5z" />
+    <path d="M5.5 8.75h3.75" />
+    <path d="M14.75 8.75h3.75" />
   </svg>
 );
 

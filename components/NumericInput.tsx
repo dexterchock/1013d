@@ -91,8 +91,12 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   }
 
   return (
-    <label className="flex items-center gap-2 bg-black/20 rounded px-2 py-1 border border-white/5 focus-within:border-white/20 transition-colors duration-200 cursor-text">
-      {label && <span className="text-[10px] font-mono text-white/70 w-2">{label}</span>}
+    <label className="flex items-center gap-2 bg-white/[0.04] rounded px-2 py-1 border border-white/10 focus-within:border-white/30 transition-colors duration-200 cursor-text">
+      {label && (
+        <span className="text-[10px] font-mono text-white/75 w-2.5 leading-none flex items-center">
+          {label}
+        </span>
+      )}
       <input
         ref={inputRef}
         id={id}
@@ -102,7 +106,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
         step={step}
         min={min}
         max={max}
-        className="w-full bg-transparent text-xs text-white outline-none text-right font-mono"
+        className="w-full bg-transparent text-xs text-white outline-none text-right font-mono leading-none"
         value={localValue}
         onChange={handleChange}
         onBlur={handleBlur}
