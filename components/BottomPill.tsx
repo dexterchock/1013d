@@ -109,7 +109,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             <button
               onClick={() => setGizmoMode('rotate')}
               className={`
-                hover-pop-btn shrink-0 ml-0.5 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
+                hover-pop-btn shrink-0 ml-1 h-8 sm:h-9 w-8 sm:w-9 rounded-full flex items-center justify-center
                 ${
                   gizmoMode === 'rotate'
                     ? 'liquid-chip-active'
@@ -128,7 +128,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             <div
               className={`
                 flex items-center overflow-hidden transition-all duration-300 ease-out
-                ${showSnap ? 'w-8 sm:w-9 ml-0.5 opacity-100' : 'w-0 ml-0 opacity-0 pointer-events-none'}
+                ${showSnap ? 'w-8 sm:w-9 ml-1 opacity-100' : 'w-0 ml-0 opacity-0 pointer-events-none'}
               `}
             >
               <button
@@ -166,7 +166,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             disabled={arStatus === 'preparing'}
             className={`hover-pop-btn shrink-0 h-8 sm:h-9 w-9 sm:w-11 rounded-full flex items-center justify-center leading-none text-xs font-sans font-semibold tracking-wider ${
               arStatus !== 'idle'
-                ? 'text-blue-400 bg-white/10'
+                ? 'bg-blue-500/20 text-blue-300 shadow-[inset_0_0_0_1px_rgba(96,165,250,0.4)]'
                 : 'text-white/90 hover:text-white hover:bg-white/10'
             }`}
             title="View in AR"
@@ -186,7 +186,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             text-xs font-sans font-semibold tracking-wider
             ${
               is1to1Mode
-                ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.45)]'
+                ? 'bg-blue-600 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]'
                 : 'bg-transparent text-white/90 hover:bg-white/10 hover:text-white'
             }
           `}

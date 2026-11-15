@@ -110,13 +110,13 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         ref={containerRef}
         className={`
           absolute left-4 top-4
-          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col overflow-hidden
-          ${sidebarOpen ? 'w-80 rounded-3xl' : 'w-[8.5rem] rounded-[28px]'}
+          transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col
+          ${sidebarOpen ? 'w-80' : 'w-[8.5rem]'}
         `}
         style={{ maxHeight: '90vh' }}
       >
         <LiquidContainer
-          className={`h-full flex flex-col relative overflow-hidden transition-all duration-700 ${
+          className={`w-full h-full flex flex-col relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
             sidebarOpen ? 'p-4 rounded-3xl' : 'p-[11px] rounded-[28px]'
           }`}
         >

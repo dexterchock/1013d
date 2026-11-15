@@ -9,11 +9,12 @@ export const LiquidContainer: React.FC<LiquidContainerProps> = ({
   children,
   className = '',
 }) => {
+  const radiusClass = /\brounded-/.test(className) ? '' : 'rounded-2xl';
   return (
     <div
       className={`
         liquid-lens
-        rounded-2xl
+        ${radiusClass}
         overflow-hidden
         transition-all duration-300
         ${className}
