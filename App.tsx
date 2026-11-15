@@ -2,8 +2,10 @@ import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { Overlay } from './components/ControlPanel';
 import { AuraEffect } from './components/AuraEffect';
 import { CalibrationModal } from './components/CalibrationModal';
+import { ArLaunchModal } from './components/ArLaunchModal';
 import type { CameraControls } from '@react-three/drei';
 import { useStore } from './store';
+import { detectArSupport, isIosDevice } from './utils/arSupport';
 
 // Global JSX augmentation for the <model-viewer> custom element
 declare global {
@@ -26,7 +28,8 @@ declare global {
 }
 
 interface ModelViewerElement extends HTMLElement {
-  activateAR?: () => void;
+  activateAR?: () => Promise<void> | void;
+  canActivateAR?: boolean;
 }
 
 const ViewerScene = React.lazy(() =>
@@ -43,9 +46,10 @@ function App() {
   const arModelUrl = useStore((state) => state.arModelUrl);
   const isArSupported = useStore((state) => state.isArSupported);
   const setArSupported = useStore((state) => state.setArSupported);
-  const setArModelUrl = useStore((state) => state.setArModelUrl);
+  const closeArSession = useStore((state) => state.closeArSession);
 
   const modelViewerRef = useRef<ModelViewerElement | null>(null);
+  const isIos = isIosDevice();
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -77,72 +81,73 @@ function App() {
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
-      setArModelUrl(null);
+      closeArSession();
     };
-  }, [setArModelUrl]);
+  }, [closeArSession]);
 
   // Detect AR capability
   useEffect(() => {
     let cancelled = false;
 
     const checkSupport = async () => {
-      let supported = false;
-
-      const a = document.createElement('a');
-      if (a.relList?.supports?.('ar')) {
-        supported = true;
-      } else if ('xr' in navigator) {
-        const xr = (
-          navigator as Navigator & {
-            xr?: { isSessionSupported?: (mode: string) => Promise<boolean> };
-          }
-        ).xr;
-        if (xr?.isSessionSupported) {
-          try {
-            supported = await xr.isSessionSupported('immersive-ar');
-          } catch {
-            supported = false;
-          }
-        }
-      }
-
-      if (!supported && /Android/i.test(navigator.userAgent)) {
-        supported = true;
-      }
-
+      const supported = await detectArSupport();
       if (!cancelled) {
         setArSupported(supported);
       }
     };
 
-    checkSupport();
+    void checkSupport();
     return () => {
       cancelled = true;
     };
   }, [setArSupported]);
 
-  // Only download @google/model-viewer when the device actually supports AR
+  // Only download @google/model-viewer on non-iOS AR devices (iOS uses direct USDZ + rel="ar")
   useEffect(() => {
-    if (!isArSupported) return;
+    if (!isArSupported || isIos) return;
     import('@google/model-viewer').catch((e) => {
       console.warn('Failed to load @google/model-viewer', e);
     });
-  }, [isArSupported]);
+  }, [isArSupported, isIos]);
 
-  // Activate AR once the exported GLB finishes loading in <model-viewer>
+  // Attempt automatic AR launch on Android/WebXR once GLB loads; fallback button stays ready in modal
   useEffect(() => {
     const mv = modelViewerRef.current;
-    if (!arModelUrl || !mv) return;
+    if (!arModelUrl || !mv || isIos) return;
 
     const handleLoad = () => {
-      mv.activateAR?.();
+      let attempts = 0;
+      const tryActivate = () => {
+        if (mv.canActivateAR) {
+          void mv.activateAR?.();
+          return;
+        }
+        if (attempts < 10) {
+          attempts += 1;
+          requestAnimationFrame(tryActivate);
+        }
+      };
+      requestAnimationFrame(tryActivate);
+    };
+
+    const handleArStatus = (event: Event) => {
+      const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+      if (status === 'session-started') {
+        closeArSession();
+      }
     };
 
     mv.addEventListener('load', handleLoad, { once: true });
+    mv.addEventListener('ar-status', handleArStatus);
     return () => {
       mv.removeEventListener('load', handleLoad);
+      mv.removeEventListener('ar-status', handleArStatus);
     };
-  }, [arModelUrl]);
+  }, [arModelUrl, isIos, closeArSession]);
+
+  const handleLaunchWebAr = () => {
+    void modelViewerRef.current?.activateAR?.();
+  };
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -203,26 +208,29 @@ function App() {
       {/* Full Screen Calibration Modal */}
       <CalibrationModal />
 
+      {/* AR Export & Launch Modal */}
+      <ArLaunchModal onLaunchWebAr={handleLaunchWebAr} />
+
       {/* 1:1 Scale Aura Effect */}
       <AuraEffect />
 
-      {/* Hidden Model Viewer for AR capabilities */}
-      {isArSupported && (
+      {/* Offscreen Model Viewer for Android / WebXR AR */}
+      {isArSupported && !isIos && (
         <model-viewer
           ref={modelViewerRef}
           src={arModelUrl || undefined}
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes="webxr scene-viewer"
           camera-controls
           style={{
             display: 'block',
-            width: '0px',
-            height: '0px',
-            position: 'absolute',
-            top: 0,
-            left: 0,
+            width: '1px',
+            height: '1px',
+            position: 'fixed',
+            bottom: 0,
+            right: 0,
+            opacity: 0,
             pointerEvents: 'none',
-            visibility: 'hidden',
           }}
         />
       )}

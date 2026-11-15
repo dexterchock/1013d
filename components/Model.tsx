@@ -21,6 +21,7 @@ import {
 } from 'three';
 import { useStore } from '../store';
 import { LoadedModel } from '../types';
+import { isIosDevice } from '../utils/arSupport';
 
 interface ModelWrapperProps {
   modelData: LoadedModel;
@@ -298,10 +299,18 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
 
   const arGenerationRequest = useStore((state) => state.arGenerationRequest);
   const clearArGenerationRequest = useStore((state) => state.clearArGenerationRequest);
-  const setArModelUrl = useStore((state) => state.setArModelUrl);
+  const setArAsset = useStore((state) => state.setArAsset);
+  const setArError = useStore((state) => state.setArError);
 
   const [group, setGroup] = useState<Group | null>(null);
   const transformControlsRef = useRef<TransformControlsImpl | null>(null);
+  const arExportIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      arExportIdRef.current += 1;
+    };
+  }, []);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -331,21 +340,15 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
     };
   }, [group, isSelected, isReady, modelData.id, updateModelTransform]);
 
-  // AR GLB export (lazy-loads GLTFExporter only when AR is requested)
+  // AR USDZ (iOS) / GLB (Android & WebXR) export, lazy-loading only the needed exporter
   useEffect(() => {
     if (!arGenerationRequest || !isSelected || !group) return;
 
-    let cancelled = false;
+    const exportId = ++arExportIdRef.current;
     clearArGenerationRequest();
 
-    const exportGlb = async () => {
-      const { GLTFExporter } = await import(
-        'three/examples/jsm/exporters/GLTFExporter.js'
-      );
-      if (cancelled) return;
-
-      const exporter = new GLTFExporter();
-      const modelClone = group.clone();
+    const buildArExportScene = (sourceGroup: Group): Group => {
+      const modelClone = sourceGroup.clone();
 
       // Strip wireframe overlays so they are never exported into AR.
       const overlaysToRemove: Object3D[] = [];
@@ -358,43 +361,88 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
         overlay.parent?.remove(overlay);
       }
 
-      // Center the model at AR placement origin instead of retaining build-plate layout offsets.
+      // Remove build-plate layout offset while keeping user rotation and scale.
       modelClone.position.set(0, 0, 0);
 
-      // Millimeters (viewer) -> Meters (AR/glTF)
+      // Millimeters (viewer) -> Meters (AR)
       const unitsWrapper = new Group();
       unitsWrapper.scale.setScalar(0.001);
       unitsWrapper.add(modelClone);
 
-      // Z-up (viewer) -> Y-up (AR/glTF)
+      // Z-up (viewer) -> Y-up (AR)
       const orientationWrapper = new Group();
       orientationWrapper.rotation.x = -Math.PI / 2;
       orientationWrapper.add(unitsWrapper);
       orientationWrapper.updateMatrixWorld(true);
 
-      exporter.parse(
-        orientationWrapper,
-        (gltf) => {
-          if (cancelled) return;
-          if (gltf instanceof ArrayBuffer) {
-            const blob = new Blob([gltf], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            setArModelUrl(url);
-          }
-        },
-        (error) => {
-          console.error('An error happened during GLTF export:', error);
-        },
-        { binary: true }
-      );
+      // Center X/Z at origin and rest the lowest geometry point on Y = 0.
+      const floorWrapper = new Group();
+      floorWrapper.add(orientationWrapper);
+      const bounds = new Box3().setFromObject(orientationWrapper);
+      if (!bounds.isEmpty()) {
+        const center = bounds.getCenter(new Vector3());
+        floorWrapper.position.set(-center.x, -bounds.min.y, -center.z);
+      }
+      floorWrapper.updateMatrixWorld(true);
+      return floorWrapper;
     };
 
-    void exportGlb();
+    const baseName =
+      modelData.file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'model';
 
-    return () => {
-      cancelled = true;
+    const exportArAsset = async () => {
+      try {
+        const exportScene = buildArExportScene(group);
+
+        if (isIosDevice()) {
+          const { USDZExporter } = await import(
+            'three/examples/jsm/exporters/USDZExporter.js'
+          );
+          if (exportId !== arExportIdRef.current) return;
+
+          const exporter = new USDZExporter();
+          const arrayBuffer = await exporter.parseAsync(exportScene, {
+            quickLookCompatible: true,
+          });
+          if (exportId !== arExportIdRef.current) return;
+
+          const blob = new Blob([arrayBuffer], { type: 'model/vnd.usdz+zip' });
+          setArAsset('usdz', URL.createObjectURL(blob), baseName);
+          return;
+        }
+
+        const { GLTFExporter } = await import(
+          'three/examples/jsm/exporters/GLTFExporter.js'
+        );
+        if (exportId !== arExportIdRef.current) return;
+
+        const exporter = new GLTFExporter();
+        const gltf = await exporter.parseAsync(exportScene, { binary: true });
+        if (exportId !== arExportIdRef.current) return;
+
+        if (!(gltf instanceof ArrayBuffer)) {
+          throw new Error('Expected binary GLB output from GLTFExporter.');
+        }
+
+        const blob = new Blob([gltf], { type: 'model/gltf-binary' });
+        setArAsset('glb', URL.createObjectURL(blob), baseName);
+      } catch (error) {
+        if (exportId !== arExportIdRef.current) return;
+        console.error('AR export failed:', error);
+        setArError('Could not prepare this model for AR.');
+      }
     };
-  }, [arGenerationRequest, isSelected, group, clearArGenerationRequest, setArModelUrl]);
+
+    void exportArAsset();
+  }, [
+    arGenerationRequest,
+    isSelected,
+    group,
+    modelData.file.name,
+    clearArGenerationRequest,
+    setArAsset,
+    setArError,
+  ]);
 
   const posX = position?.x ?? 0;
   const posY = position?.y ?? 0;

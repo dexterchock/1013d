@@ -96,14 +96,23 @@ const layoutNewModels = (
 let dimensionUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingDimensionUpdates: Record<string, Vec3> = {};
 
+export type ArStatus = 'idle' | 'preparing' | 'ready' | 'error';
+
 export interface ArState {
   isArSupported: boolean;
+  arStatus: ArStatus;
   arGenerationRequest: number | null;
   arModelUrl: string | null;
+  arUsdzUrl: string | null;
+  arFileName: string | null;
+  arError: string | null;
   setArSupported: (supported: boolean) => void;
   triggerArGeneration: () => void;
   clearArGenerationRequest: () => void;
   setArModelUrl: (url: string | null) => void;
+  setArAsset: (kind: 'usdz' | 'glb', url: string, fileName: string) => void;
+  setArError: (message: string) => void;
+  closeArSession: () => void;
 }
 
 const initialScreen = getDefaultScreenSize();
@@ -124,8 +133,12 @@ export const useStore = create<ViewerState & ArState>()(
       uploadError: null,
 
       isArSupported: false,
+      arStatus: 'idle',
       arGenerationRequest: null,
       arModelUrl: null,
+      arUsdzUrl: null,
+      arFileName: null,
+      arError: null,
 
       calibrationSettings: {
         resolutionWidth: initialScreen.width,
@@ -320,7 +333,19 @@ export const useStore = create<ViewerState & ArState>()(
       },
 
       setArSupported: (supported) => set({ isArSupported: supported }),
-      triggerArGeneration: () => set({ arGenerationRequest: Date.now() }),
+      triggerArGeneration: () =>
+        set((state) => {
+          if (state.arModelUrl) URL.revokeObjectURL(state.arModelUrl);
+          if (state.arUsdzUrl) URL.revokeObjectURL(state.arUsdzUrl);
+          return {
+            arGenerationRequest: Date.now(),
+            arStatus: 'preparing',
+            arModelUrl: null,
+            arUsdzUrl: null,
+            arFileName: null,
+            arError: null,
+          };
+        }),
       clearArGenerationRequest: () => set({ arGenerationRequest: null }),
 
       setArModelUrl: (url) =>
@@ -329,6 +354,52 @@ export const useStore = create<ViewerState & ArState>()(
             URL.revokeObjectURL(state.arModelUrl);
           }
           return { arModelUrl: url };
+        }),
+
+      setArAsset: (kind, url, fileName) =>
+        set((state) => {
+          if (state.arModelUrl && state.arModelUrl !== url) {
+            URL.revokeObjectURL(state.arModelUrl);
+          }
+          if (state.arUsdzUrl && state.arUsdzUrl !== url) {
+            URL.revokeObjectURL(state.arUsdzUrl);
+          }
+          return kind === 'usdz'
+            ? {
+                arUsdzUrl: url,
+                arModelUrl: null,
+                arFileName: fileName,
+                arStatus: 'ready',
+                arError: null,
+              }
+            : {
+                arModelUrl: url,
+                arUsdzUrl: null,
+                arFileName: fileName,
+                arStatus: 'ready',
+                arError: null,
+              };
+        }),
+
+      setArError: (message) =>
+        set({
+          arStatus: 'error',
+          arError: message,
+          arGenerationRequest: null,
+        }),
+
+      closeArSession: () =>
+        set((state) => {
+          if (state.arModelUrl) URL.revokeObjectURL(state.arModelUrl);
+          if (state.arUsdzUrl) URL.revokeObjectURL(state.arUsdzUrl);
+          return {
+            arStatus: 'idle',
+            arGenerationRequest: null,
+            arModelUrl: null,
+            arUsdzUrl: null,
+            arFileName: null,
+            arError: null,
+          };
         }),
     }),
     {

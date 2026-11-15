@@ -14,6 +14,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
   const rotationSnap = useStore((state) => state.rotationSnap);
   const isArSupported = useStore((state) => state.isArSupported);
   const is1to1Mode = useStore((state) => state.is1to1Mode);
+  const arStatus = useStore((state) => state.arStatus);
   const isWireframeVisible = useStore((state) => state.isWireframeVisible);
   const ppi = useStore((state) => state.ppi);
 
@@ -143,8 +144,14 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
           `}
         >
           <button
+            type="button"
             onClick={triggerArGeneration}
-            className="h-10 w-12 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+            disabled={arStatus === 'preparing'}
+            className={`h-10 w-12 flex items-center justify-center transition-colors ${
+              arStatus !== 'idle'
+                ? 'text-blue-400 bg-white/10'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+            }`}
             title="View in AR"
             aria-label="View Augmented Reality"
           >
