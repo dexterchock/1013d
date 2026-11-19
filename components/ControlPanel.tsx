@@ -63,7 +63,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
     if (!content || !inner || !container) return;
 
     if (!sidebarOpen) {
-      container.style.height = '56px';
+      container.style.height = '58px';
       content.scrollTop = 0;
     }
 
@@ -71,10 +71,10 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
       const entry = entries[0];
       if (!entry) return;
       if (!sidebarOpen) {
-        container.style.height = '56px';
+        container.style.height = '58px';
         return;
       }
-      const height = Math.ceil(entry.contentRect.height) + 34;
+      const height = Math.ceil(entry.contentRect.height) + 58;
       container.style.height = `${height}px`;
     });
 
@@ -111,78 +111,74 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
         className={`
           absolute left-4 top-4
           transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] pointer-events-auto flex flex-col
-          ${sidebarOpen ? 'w-80 max-w-[calc(100vw-2rem)]' : 'w-[8.5rem]'}
+          ${sidebarOpen ? 'w-80 max-w-[calc(100vw-2rem)]' : 'w-[9rem]'}
         `}
         style={{ maxHeight: 'calc(100dvh - 7rem)' }}
       >
         <LiquidContainer
-          className={`w-full h-full flex flex-col relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-            sidebarOpen ? 'p-4 rounded-3xl' : 'p-[11px] rounded-[28px]'
+          className={`w-full h-full p-3 flex flex-col relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            sidebarOpen ? 'rounded-3xl' : 'rounded-[29px]'
           }`}
         >
+          {/* Header */}
+          <div className="flex justify-between items-center shrink-0 h-8 pl-1.5 pr-0">
+            <h1 className="m-0 leading-none flex items-center">
+              <button
+                type="button"
+                className="hover-pop-btn flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
+                onClick={toggleSidebar}
+                aria-label="1013D, toggle sidebar"
+              >
+                <span className="sr-only">1013D</span>
+                <span className="hover-pop-label inline-flex items-center">
+                  <AnimatedLogo />
+                </span>
+              </button>
+            </h1>
+
+            <div className="flex items-center gap-1.5">
+              {sidebarOpen && (
+                <button
+                  onClick={() => setShowAbout((prev) => !prev)}
+                  className={`hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full ${
+                    showAbout
+                      ? 'liquid-chip-active'
+                      : 'bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white'
+                  }`}
+                  aria-label="About 1013D"
+                >
+                  <span className="hover-pop-icon">
+                    <InfoIcon />
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={toggleSidebar}
+                className="hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white"
+                aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              >
+                <span className="hover-pop-icon">
+                  {sidebarOpen ? <ChevronUp /> : <ChevronDown />}
+                </span>
+              </button>
+            </div>
+          </div>
+
           <div
             ref={contentRef}
-            className={`flex flex-col max-h-full no-scrollbar ${
+            className={`flex-1 min-h-0 flex flex-col no-scrollbar ${
               sidebarOpen ? 'overflow-y-auto' : 'overflow-hidden'
             }`}
           >
             <div ref={innerRef} className="flex flex-col shrink-0">
-              {/* Header */}
-            <div
-              className={`flex justify-between items-center shrink-0 h-8 mb-0 ${
-                sidebarOpen ? 'px-0' : 'pl-1.5 pr-0'
-              }`}
-            >
-              <h1 className="m-0 leading-none flex items-center">
-                <button
-                  type="button"
-                  className="hover-pop-btn flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0 text-left"
-                  onClick={toggleSidebar}
-                  aria-label="1013D, toggle sidebar"
-                >
-                  <span className="sr-only">1013D</span>
-                  <span className="hover-pop-label inline-flex items-center">
-                    <AnimatedLogo />
-                  </span>
-                </button>
-              </h1>
-
-              <div className="flex items-center gap-1.5">
-                {sidebarOpen && (
-                  <button
-                    onClick={() => setShowAbout((prev) => !prev)}
-                    className={`hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full ${
-                      showAbout
-                        ? 'liquid-chip-active'
-                        : 'bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white'
-                    }`}
-                    aria-label="About 1013D"
-                  >
-                    <span className="hover-pop-icon">
-                      <InfoIcon />
-                    </span>
-                  </button>
-                )}
-                <button
-                  onClick={toggleSidebar}
-                  className="hover-pop-btn w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.14] text-white/90 hover:text-white"
-                  aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-                >
-                  <span className="hover-pop-icon">
-                    {sidebarOpen ? <ChevronUp /> : <ChevronDown />}
-                  </span>
-                </button>
-              </div>
-            </div>
-
               {/* Collapsible Content */}
               <div
                 className={`
-                  flex flex-col transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+                  flex flex-col pt-4 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
                   ${
                     sidebarOpen
-                      ? 'mt-4 opacity-100 translate-y-0 delay-100'
-                      : 'mt-0 opacity-0 -translate-y-4 pointer-events-none'
+                      ? 'opacity-100 translate-y-0 delay-100'
+                      : 'opacity-0 -translate-y-4 pointer-events-none'
                   }
                 `}
               >

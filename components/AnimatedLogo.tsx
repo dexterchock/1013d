@@ -107,10 +107,10 @@ export const AnimatedLogo: React.FC = () => {
           ${showSuffix ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}
         `}
       >
-        <span className="overflow-hidden flex items-center">
+        <span className="overflow-hidden flex items-center py-1 -my-1">
           <span
             className={`
-              text-xl font-bold tracking-tight text-blue-500 leading-none font-mono ml-0.5
+              text-xl font-bold tracking-tight text-blue-500 leading-none font-mono ml-0.5 pr-0.5
               transform transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)]
               ${showSuffix ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
             `}
