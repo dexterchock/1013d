@@ -9,9 +9,13 @@ const TRANSPARENT_AR_PIXEL =
 
 interface ArLaunchModalProps {
   onLaunchWebAr: () => void;
+  isWebArReady: boolean;
 }
 
-export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) => {
+export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({
+  onLaunchWebAr,
+  isWebArReady,
+}) => {
   const arStatus = useStore((state) => state.arStatus);
   const arUsdzUrl = useStore((state) => state.arUsdzUrl);
   const arModelUrl = useStore((state) => state.arModelUrl);
@@ -20,7 +24,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
   const closeArSession = useStore((state) => state.closeArSession);
   const triggerArGeneration = useStore((state) => state.triggerArGeneration);
 
-  const isOpen = arStatus !== 'idle';
+  const isOpen = arStatus === 'preparing' || arStatus === 'ready' || arStatus === 'error';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -111,7 +115,7 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
               </span>
               <a
                 rel="ar"
-                href={arUsdzUrl}
+                href={`${arUsdzUrl}#allowsContentScaling=0`}
                 download={usdzDownloadName}
                 aria-label="Open in AR Quick Look"
                 className="absolute inset-0 z-10 block"
@@ -146,9 +150,12 @@ export const ArLaunchModal: React.FC<ArLaunchModalProps> = ({ onLaunchWebAr }) =
             <button
               type="button"
               onClick={onLaunchWebAr}
-              className="hover-pop-btn h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-sm font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.4)]"
+              disabled={!isWebArReady}
+              className="hover-pop-btn h-12 w-full rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.4)]"
             >
-              <span className="hover-pop-label">Launch AR Viewer</span>
+              <span className="hover-pop-label">
+                {isWebArReady ? 'Launch AR Viewer' : 'Loading AR Viewer...'}
+              </span>
             </button>
           </div>
         )}

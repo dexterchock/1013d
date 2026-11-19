@@ -1,25 +1,29 @@
 import type { CameraControls } from '@react-three/drei';
-import { Axis } from '../types';
-import { Vector3, PerspectiveCamera } from 'three';
+import { Axis, Vec3 } from '../types';
+
+const AXIS_ALIGNMENT_THRESHOLD = 0.99;
 
 const getApproximateAxis = (controls: CameraControls): Axis | null => {
-  const pos = new Vector3();
-  const target = new Vector3();
+  const scratch = controls.camera?.position?.clone();
+  if (!scratch) return null;
 
-  controls.getPosition(pos);
-  controls.getTarget(target);
+  const pos = controls.getPosition(controls.camera.position.clone());
+  const target = controls.getTarget(scratch);
 
   // Use relative position (Eye - Target) so detection works even when panned.
-  pos.sub(target);
+  const dx = pos.x - target.x;
+  const dy = pos.y - target.y;
+  const dz = pos.z - target.z;
+  const len = Math.hypot(dx, dy, dz);
+  if (len < 1e-4) return null;
 
-  const absX = Math.abs(pos.x);
-  const absY = Math.abs(pos.y);
-  const absZ = Math.abs(pos.z);
-  const maxComp = Math.max(absX, absY, absZ);
+  const nx = dx / len;
+  const ny = dy / len;
+  const nz = dz / len;
 
-  if (absX === maxComp) return pos.x > 0 ? 'X' : '-X';
-  if (absY === maxComp) return pos.y > 0 ? 'Y' : '-Y';
-  if (absZ === maxComp) return pos.z > 0 ? 'Z' : '-Z';
+  if (Math.abs(nx) > AXIS_ALIGNMENT_THRESHOLD) return nx > 0 ? 'X' : '-X';
+  if (Math.abs(ny) > AXIS_ALIGNMENT_THRESHOLD) return ny > 0 ? 'Y' : '-Y';
+  if (Math.abs(nz) > AXIS_ALIGNMENT_THRESHOLD) return nz > 0 ? 'Z' : '-Z';
   return null;
 };
 
@@ -27,43 +31,41 @@ export const transitionToAxis = (
   controls: CameraControls | null,
   axisBase: 'X' | 'Y' | 'Z'
 ) => {
-  if (!controls) return;
+  if (!controls || !controls.camera) return;
 
   const currentAxis = getApproximateAxis(controls);
   const targetAxis: Axis = currentAxis === axisBase ? (`-${axisBase}` as Axis) : axisBase;
 
-  const currentTarget = new Vector3();
-  controls.getTarget(currentTarget);
+  const currentTarget = controls.getTarget(controls.camera.position.clone());
   const dist = controls.distance;
 
-  const offset = new Vector3();
+  const offset: Vec3 = { x: 0, y: 0, z: 0 };
   // Z-up coordinate system
   switch (targetAxis) {
     case 'X':
-      offset.set(dist, 0, 0);
+      offset.x = dist;
       break;
     case '-X':
-      offset.set(-dist, 0, 0);
+      offset.x = -dist;
       break;
     case 'Y':
-      offset.set(0, dist, 0);
+      offset.y = dist;
       break;
     case '-Y':
-      offset.set(0, -dist, 0);
+      offset.y = -dist;
       break;
     case 'Z':
-      offset.set(0, 0, dist);
+      offset.z = dist;
       break;
     case '-Z':
-      offset.set(0, 0, -dist);
+      offset.z = -dist;
       break;
   }
 
-  const newEye = currentTarget.clone().add(offset);
   controls.setLookAt(
-    newEye.x,
-    newEye.y,
-    newEye.z,
+    currentTarget.x + offset.x,
+    currentTarget.y + offset.y,
+    currentTarget.z + offset.z,
     currentTarget.x,
     currentTarget.y,
     currentTarget.z,
@@ -73,25 +75,11 @@ export const transitionToAxis = (
 
 export const apply1to1Scale = (
   controls: CameraControls | null,
-  ppi: number,
-  canvasHeight: number = typeof window !== 'undefined' ? window.innerHeight : 0
+  ppi: number
 ) => {
   if (!controls || !controls.camera) return;
   if (!ppi || ppi <= 0) return;
 
   const ppm = ppi / 25.4;
-  const camera = controls.camera;
-
-  if (camera.type === 'OrthographicCamera') {
-    controls.zoomTo(ppm, true);
-  } else {
-    const cam = camera as PerspectiveCamera;
-    if (!cam.fov || canvasHeight <= 0) return;
-
-    const fovRad = (cam.fov * Math.PI) / 180;
-    const visibleHeightMM = canvasHeight / ppm;
-    const requiredDistance = visibleHeightMM / (2 * Math.tan(fovRad / 2));
-
-    controls.dollyTo(requiredDistance, true);
-  }
+  controls.zoomTo(ppm, true);
 };

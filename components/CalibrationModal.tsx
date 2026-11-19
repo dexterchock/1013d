@@ -61,6 +61,10 @@ export const CalibrationModal: React.FC = () => {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Manual Screen Calibration"
+      aria-hidden={!isOpen}
       className={`
         fixed inset-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
         ${
@@ -120,53 +124,65 @@ export const CalibrationModal: React.FC = () => {
             </div>
 
             {/* Card Container */}
-            <div className="relative flex items-center justify-center">
-              {/* Height Dimensions Lines */}
-              <div className="absolute -left-12 top-0 bottom-0 flex flex-col justify-center items-center h-full opacity-50 md:opacity-80">
-                <div className="w-[1px] bg-white/30 absolute top-0 bottom-0 left-1/2 -translate-x-1/2" />
-                <div className="w-2 h-[1px] bg-white/30 absolute top-0 left-1/2 -translate-x-1/2" />
-                <div className="w-2 h-[1px] bg-white/30 absolute bottom-0 left-1/2 -translate-x-1/2" />
-                <span className="bg-black text-white/85 px-1 py-0.5 text-[9px] font-mono -rotate-90 whitespace-nowrap z-10 rounded border border-white/15">
+            <div className="relative w-full flex items-center justify-center">
+              {/* Mobile Height Guide pinned inside viewport when card width overflows narrow screens */}
+              <div className="md:hidden pointer-events-none absolute left-1 top-0 bottom-0 z-20 flex flex-col justify-center items-center opacity-80">
+                <div className="w-[1px] bg-white/35 absolute top-0 bottom-0 left-1/2 -translate-x-1/2" />
+                <div className="w-2 h-[1px] bg-white/35 absolute top-0 left-1/2 -translate-x-1/2" />
+                <div className="w-2 h-[1px] bg-white/35 absolute bottom-0 left-1/2 -translate-x-1/2" />
+                <span className="bg-black text-white/90 px-1 py-0.5 text-[9px] font-mono -rotate-90 whitespace-nowrap z-10 rounded border border-white/15">
                   53.98 mm
                 </span>
               </div>
 
-              {/* Credit Card Shape */}
-              <div
-                className="bg-gradient-to-br from-blue-500 to-blue-600 relative shadow-[0_0_50px_rgba(59,130,246,0.3)] transition-all duration-75 flex items-center justify-center border-t border-white/20 shrink-0 mx-auto"
-                style={{
-                  width: `${cardWidthPx}px`,
-                  height: `${cardHeightPx}px`,
-                  borderRadius: `${cardRadiusPx}px`,
-                }}
-              >
-                <div className="absolute left-[10%] top-[30%] w-[15%] h-[20%] bg-yellow-200/20 rounded-sm border border-yellow-200/40" />
-
-                <div
-                  className="absolute left-0 right-0 top-[60%] text-center text-blue-950/40 font-bold tracking-wider pointer-events-none select-none uppercase whitespace-nowrap font-mono"
-                  style={{
-                    fontSize: `${cardFontSizePx}px`,
-                    textShadow: '0 1px 0 rgba(255,255,255,0.2)',
-                  }}
-                >
-                  Dexter Chock&apos;s Credit Card
+              <div className="relative flex items-center justify-center">
+                {/* Desktop Height Dimensions Lines */}
+                <div className="hidden md:flex absolute -left-12 top-0 bottom-0 flex-col justify-center items-center h-full opacity-80">
+                  <div className="w-[1px] bg-white/30 absolute top-0 bottom-0 left-1/2 -translate-x-1/2" />
+                  <div className="w-2 h-[1px] bg-white/30 absolute top-0 left-1/2 -translate-x-1/2" />
+                  <div className="w-2 h-[1px] bg-white/30 absolute bottom-0 left-1/2 -translate-x-1/2" />
+                  <span className="bg-black text-white/85 px-1 py-0.5 text-[9px] font-mono -rotate-90 whitespace-nowrap z-10 rounded border border-white/15">
+                    53.98 mm
+                  </span>
                 </div>
 
-                {/* Mobile Height Guides */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-white/80 md:hidden" />
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-white/80 md:hidden" />
+                {/* Credit Card Shape */}
+                <div
+                  className="bg-gradient-to-br from-blue-500 to-blue-600 relative shadow-[0_0_50px_rgba(59,130,246,0.3)] flex items-center justify-center border-t border-white/20 shrink-0 mx-auto"
+                  style={{
+                    width: `${cardWidthPx}px`,
+                    height: `${cardHeightPx}px`,
+                    borderRadius: `${cardRadiusPx}px`,
+                  }}
+                >
+                  <div className="absolute left-[10%] top-[30%] w-[15%] h-[20%] bg-yellow-200/20 rounded-sm border border-yellow-200/40" />
 
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/50 animate-pulse" />
-                <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/50 animate-pulse" />
+                  <div
+                    className="absolute left-0 right-0 top-[60%] text-center text-blue-950/40 font-bold tracking-wider pointer-events-none select-none uppercase whitespace-nowrap font-mono"
+                    style={{
+                      fontSize: `${cardFontSizePx}px`,
+                      textShadow: '0 1px 0 rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    Dexter Chock&apos;s Credit Card
+                  </div>
 
-                {/* Width Dimensions Lines */}
-                <div className="absolute -bottom-8 left-0 right-0 flex items-center justify-center opacity-30 md:opacity-70 transition-opacity">
-                  <div className="h-[1px] bg-white/30 absolute left-0 right-0 top-1/2" />
-                  <div className="h-[5px] bg-white/30 absolute left-0 top-0 bottom-0" />
-                  <div className="h-[5px] bg-white/30 absolute right-0 top-0 bottom-0" />
-                  <span className="bg-black text-white/85 px-2 text-[10px] font-mono relative z-10">
-                    85.60 mm
-                  </span>
+                  {/* Mobile Height Guides */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-white/80 md:hidden" />
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 -mb-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-white/80 md:hidden" />
+
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/50 animate-pulse" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/50 animate-pulse" />
+
+                  {/* Width Dimensions Lines */}
+                  <div className="absolute -bottom-8 left-0 right-0 flex items-center justify-center opacity-30 md:opacity-70 transition-opacity">
+                    <div className="h-[1px] bg-white/30 absolute left-0 right-0 top-1/2" />
+                    <div className="h-[5px] bg-white/30 absolute left-0 top-0 bottom-0" />
+                    <div className="h-[5px] bg-white/30 absolute right-0 top-0 bottom-0" />
+                    <span className="bg-black text-white/85 px-2 text-[10px] font-mono relative z-10">
+                      85.60 mm
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

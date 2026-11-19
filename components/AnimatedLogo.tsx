@@ -22,6 +22,18 @@ export const AnimatedLogo: React.FC = () => {
   const DURATION = 2200;
 
   useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      if (numberSpanRef.current) {
+        numberSpanRef.current.textContent = String(DISPLAY_CLAMP);
+      }
+      suffixTriggeredRef.current = true;
+      setShowSuffix(true);
+      return;
+    }
+
     const animate = (time: number) => {
       if (startTimeRef.current === null) {
         startTimeRef.current = time;

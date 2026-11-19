@@ -3,6 +3,7 @@ import type { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer } from './LiquidContainer';
 import { MagnetIcon, MoveIcon, RotateIcon, WireframeIcon } from './Icons';
+import { apply1to1Scale, transitionToAxis } from '../utils/viewUtils';
 
 interface BottomPillProps {
   controlsRef: React.MutableRefObject<CameraControls | null>;
@@ -28,15 +29,11 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
   const showAR = showModelTools && isArSupported;
 
   const handleAxisClick = (axis: 'X' | 'Y' | 'Z') => {
-    void import('../utils/viewUtils').then(({ transitionToAxis }) => {
-      transitionToAxis(controlsRef.current, axis);
-    });
+    transitionToAxis(controlsRef.current, axis);
   };
 
   const handle1to1Click = () => {
-    void import('../utils/viewUtils').then(({ apply1to1Scale }) => {
-      apply1to1Scale(controlsRef.current, ppi);
-    });
+    apply1to1Scale(controlsRef.current, ppi);
   };
 
   return (
@@ -100,6 +97,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
               `}
               title="Move"
               aria-label="Move Tool"
+              aria-pressed={gizmoMode === 'translate'}
             >
               <span className="hover-pop-icon">
                 <MoveIcon />
@@ -118,6 +116,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
               `}
               title="Rotate"
               aria-label="Rotate Tool"
+              aria-pressed={gizmoMode === 'rotate'}
             >
               <span className="hover-pop-icon">
                 <RotateIcon />
@@ -143,6 +142,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
                 `}
                 title="Snap"
                 aria-label="Toggle Rotation Snap"
+                aria-pressed={rotationSnap !== null}
               >
                 <span className="hover-pop-icon">
                   <MagnetIcon />
@@ -191,6 +191,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
             }
           `}
           aria-label="1:1 real world scale"
+          aria-pressed={is1to1Mode}
         >
           <span className="hover-pop-label leading-none">1:1</span>
         </button>

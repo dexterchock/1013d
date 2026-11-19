@@ -18,6 +18,7 @@ declare global {
         src?: string | null;
         ar?: boolean;
         'ar-modes'?: string;
+        'ar-scale'?: string;
         'camera-controls'?: boolean;
         style?: React.CSSProperties;
         ref?: React.Ref<HTMLElement>;
@@ -46,40 +47,35 @@ function App() {
   const arModelUrl = useStore((state) => state.arModelUrl);
   const isArSupported = useStore((state) => state.isArSupported);
   const setArSupported = useStore((state) => state.setArSupported);
+  const setArPresenting = useStore((state) => state.setArPresenting);
+  const setArError = useStore((state) => state.setArError);
   const closeArSession = useStore((state) => state.closeArSession);
 
+  const [isWebArReady, setIsWebArReady] = useState(false);
   const modelViewerRef = useRef<ModelViewerElement | null>(null);
   const isIos = isIosDevice();
 
   useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const isAllowed =
-        ['INPUT', 'TEXTAREA', 'A'].includes(target.tagName) || target.isContentEditable;
-      if (!isAllowed) {
-        e.preventDefault();
-      }
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement | null;
       const isInput =
-        ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable;
+        !target ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+        target.isContentEditable;
       if (isInput) return;
 
-      if (e.key === 'Delete') {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         const state = useStore.getState();
+        if (state.isCalibrationModalOpen || state.arStatus !== 'idle') return;
         if (state.selectedModelId) {
           state.removeModel(state.selectedModelId);
         }
       }
     };
 
-    window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
       closeArSession();
     };
@@ -110,47 +106,63 @@ function App() {
     });
   }, [isArSupported, isIos]);
 
-  // Attempt automatic AR launch on Android/WebXR once GLB loads; fallback button stays ready in modal
+  // Sync WebXR readiness and session lifecycle with <model-viewer> (keeps blob URL alive while presenting)
   useEffect(() => {
+    setIsWebArReady(false);
     const mv = modelViewerRef.current;
     if (!arModelUrl || !mv || isIos) return;
 
     const handleLoad = () => {
-      let attempts = 0;
-      const tryActivate = () => {
-        if (mv.canActivateAR) {
-          void mv.activateAR?.();
-          return;
-        }
-        if (attempts < 10) {
-          attempts += 1;
-          requestAnimationFrame(tryActivate);
-        }
-      };
-      requestAnimationFrame(tryActivate);
+      setIsWebArReady(true);
+    };
+
+    const handleError = () => {
+      setIsWebArReady(false);
+      setArError('Failed to load model into WebXR viewer.');
     };
 
     const handleArStatus = (event: Event) => {
       const status = (event as CustomEvent<{ status?: string }>).detail?.status;
       if (status === 'session-started') {
-        closeArSession();
+        setArPresenting();
+      } else if (status === 'not-presenting') {
+        if (useStore.getState().arStatus === 'presenting') {
+          closeArSession();
+        }
+      } else if (status === 'failed') {
+        setArError('Could not start AR session on this device.');
       }
     };
 
-    mv.addEventListener('load', handleLoad, { once: true });
+    mv.addEventListener('load', handleLoad);
+    mv.addEventListener('error', handleError);
     mv.addEventListener('ar-status', handleArStatus);
     return () => {
+      setIsWebArReady(false);
       mv.removeEventListener('load', handleLoad);
+      mv.removeEventListener('error', handleError);
       mv.removeEventListener('ar-status', handleArStatus);
     };
-  }, [arModelUrl, isIos, closeArSession]);
+  }, [arModelUrl, isIos, setArPresenting, setArError, closeArSession]);
 
-  const handleLaunchWebAr = () => {
-    void modelViewerRef.current?.activateAR?.();
+  const handleLaunchWebAr = async () => {
+    const mv = modelViewerRef.current;
+    if (!mv || typeof mv.activateAR !== 'function' || mv.canActivateAR === false) {
+      setArError('WebXR AR session is not available on this device.');
+      return;
+    }
+
+    try {
+      await mv.activateAR();
+    } catch (error) {
+      console.error('Failed to activate WebXR AR session:', error);
+      setArError('Could not launch WebXR AR session.');
+    }
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!Array.from(e.dataTransfer?.types ?? []).includes('Files')) return;
     if (!isDragging) setIsDragging(true);
   };
 
@@ -209,18 +221,22 @@ function App() {
       <CalibrationModal />
 
       {/* AR Export & Launch Modal */}
-      <ArLaunchModal onLaunchWebAr={handleLaunchWebAr} />
+      <ArLaunchModal
+        onLaunchWebAr={() => void handleLaunchWebAr()}
+        isWebArReady={isWebArReady}
+      />
 
       {/* 1:1 Scale Aura Effect */}
       <AuraEffect />
 
-      {/* Offscreen Model Viewer for Android / WebXR AR */}
+      {/* Offscreen Model Viewer for WebXR AR */}
       {isArSupported && !isIos && (
         <model-viewer
           ref={modelViewerRef}
           src={arModelUrl || undefined}
           ar
-          ar-modes="webxr scene-viewer"
+          ar-modes="webxr"
+          ar-scale="fixed"
           camera-controls
           style={{
             display: 'block',

@@ -9,7 +9,6 @@ export interface Vec3 {
 export interface LoadedModel {
   id: string;
   file: File;
-  url: string;
   color: string;
   visible: boolean;
 }
@@ -18,7 +17,6 @@ export interface ViewerState {
   models: LoadedModel[];
   selectedModelId: string | null;
   ppi: number; // Pixels Per Inch
-  isGridVisible: boolean;
   isWireframeVisible: boolean;
   gizmoMode: 'translate' | 'rotate' | 'scale';
   rotationSnap: number | null; // in radians
@@ -43,10 +41,10 @@ export interface ViewerState {
   addModels: (files: File[]) => void;
   addExampleModel: () => Promise<void>;
   removeModel: (id: string) => void;
+  failModelLoad: (id: string, message: string) => void;
   selectModel: (id: string | null) => void;
   setPPI: (ppi: number) => void;
   setCalibrationSettings: (settings: Partial<ViewerState['calibrationSettings']>) => void;
-  toggleGrid: () => void;
   toggleWireframe: () => void;
   setGizmoMode: (mode: 'translate' | 'rotate' | 'scale') => void;
   setRotationSnap: (angleDeg: number | null) => void;

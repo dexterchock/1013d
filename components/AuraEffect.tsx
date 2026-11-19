@@ -20,8 +20,16 @@ export const AuraEffect: React.FC = () => {
             ${isVisible ? 'opacity-100' : 'opacity-0'}
           `}
         >
-          <div className="absolute inset-0 shadow-[inset_0_0_20px_0px_rgba(59,130,246,1)] animate-fiber-breath" />
-          <div className="absolute inset-0 border border-blue-500/80 animate-fiber-breath" />
+          <div
+            className={`absolute inset-0 shadow-[inset_0_0_20px_0px_rgba(59,130,246,1)] ${
+              isVisible ? 'animate-fiber-breath' : ''
+            }`}
+          />
+          <div
+            className={`absolute inset-0 border border-blue-500/80 ${
+              isVisible ? 'animate-fiber-breath' : ''
+            }`}
+          />
         </div>
       </div>
     </div>

@@ -17,6 +17,23 @@ const generateModelColor = () => {
   return `hsl(${hue}, 60%, 50%)`;
 };
 
+const generateModelId = (): string => {
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    if (typeof crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+  }
+  return `model-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 const getDefaultScreenSize = () => ({
   width: typeof window !== 'undefined' ? window.screen.width : 1920,
   height: typeof window !== 'undefined' ? window.screen.height : 1080,
@@ -96,7 +113,7 @@ const layoutNewModels = (
 let dimensionUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingDimensionUpdates: Record<string, Vec3> = {};
 
-export type ArStatus = 'idle' | 'preparing' | 'ready' | 'error';
+export type ArStatus = 'idle' | 'preparing' | 'ready' | 'presenting' | 'error';
 
 export interface ArState {
   isArSupported: boolean;
@@ -109,13 +126,56 @@ export interface ArState {
   setArSupported: (supported: boolean) => void;
   triggerArGeneration: () => void;
   clearArGenerationRequest: () => void;
-  setArModelUrl: (url: string | null) => void;
   setArAsset: (kind: 'usdz' | 'glb', url: string, fileName: string) => void;
+  setArPresenting: () => void;
   setArError: (message: string) => void;
   closeArSession: () => void;
 }
 
 const initialScreen = getDefaultScreenSize();
+
+const IDLE_AR_RESET = {
+  arStatus: 'idle' as const,
+  arGenerationRequest: null,
+  arModelUrl: null,
+  arUsdzUrl: null,
+  arFileName: null,
+  arError: null,
+};
+
+const revokeAndResetAr = (state: {
+  arModelUrl: string | null;
+  arUsdzUrl: string | null;
+}) => {
+  if (state.arModelUrl) URL.revokeObjectURL(state.arModelUrl);
+  if (state.arUsdzUrl) URL.revokeObjectURL(state.arUsdzUrl);
+  return IDLE_AR_RESET;
+};
+
+const removeModelFromState = (
+  state: ViewerState & ArState,
+  id: string
+): Partial<ViewerState & ArState> => {
+  const newModels = state.models.filter((m) => m.id !== id);
+  const { [id]: _dim, ...remainingDimensions } = state.modelDimensions;
+  const { [id]: _rot, ...remainingRotations } = state.modelRotations;
+  const { [id]: _scale, ...remainingScales } = state.modelScales;
+  const { [id]: _pos, ...remainingPositions } = state.modelPositions;
+
+  const isRemovingSelected = state.selectedModelId === id;
+  const arUpdates =
+    isRemovingSelected && state.arStatus !== 'idle' ? revokeAndResetAr(state) : {};
+
+  return {
+    models: newModels,
+    selectedModelId: isRemovingSelected ? null : state.selectedModelId,
+    modelDimensions: remainingDimensions,
+    modelRotations: remainingRotations,
+    modelScales: remainingScales,
+    modelPositions: remainingPositions,
+    ...arUpdates,
+  };
+};
 
 export const useStore = create<ViewerState & ArState>()(
   persist(
@@ -123,7 +183,6 @@ export const useStore = create<ViewerState & ArState>()(
       models: [],
       selectedModelId: null,
       ppi: DEFAULT_PPI,
-      isGridVisible: true,
       isWireframeVisible: false,
       gizmoMode: 'translate',
       rotationSnap: Math.PI / 4,
@@ -175,9 +234,8 @@ export const useStore = create<ViewerState & ArState>()(
         }
 
         const newModels: LoadedModel[] = validFiles.map((file) => ({
-          id: crypto.randomUUID(),
+          id: generateModelId(),
           file,
-          url: URL.createObjectURL(file),
           color: generateModelColor(),
           visible: true,
         }));
@@ -220,25 +278,16 @@ export const useStore = create<ViewerState & ArState>()(
         // Drop any queued dimension updates for this model before the debounce fires.
         delete pendingDimensionUpdates[id];
 
-        set((state) => {
-          const model = state.models.find((m) => m.id === id);
-          if (model) URL.revokeObjectURL(model.url);
+        set((state) => removeModelFromState(state, id));
+      },
 
-          const newModels = state.models.filter((m) => m.id !== id);
-          const { [id]: _dim, ...remainingDimensions } = state.modelDimensions;
-          const { [id]: _rot, ...remainingRotations } = state.modelRotations;
-          const { [id]: _scale, ...remainingScales } = state.modelScales;
-          const { [id]: _pos, ...remainingPositions } = state.modelPositions;
+      failModelLoad: (id, message) => {
+        delete pendingDimensionUpdates[id];
 
-          return {
-            models: newModels,
-            selectedModelId: state.selectedModelId === id ? null : state.selectedModelId,
-            modelDimensions: remainingDimensions,
-            modelRotations: remainingRotations,
-            modelScales: remainingScales,
-            modelPositions: remainingPositions,
-          };
-        });
+        set((state) => ({
+          ...removeModelFromState(state, id),
+          uploadError: message,
+        }));
       },
 
       selectModel: (id) => set({ selectedModelId: id }),
@@ -254,8 +303,6 @@ export const useStore = create<ViewerState & ArState>()(
         set((state) => ({
           calibrationSettings: { ...state.calibrationSettings, ...settings },
         })),
-
-      toggleGrid: () => set((state) => ({ isGridVisible: !state.isGridVisible })),
 
       toggleWireframe: () => set((state) => ({ isWireframeVisible: !state.isWireframeVisible })),
 
@@ -334,27 +381,12 @@ export const useStore = create<ViewerState & ArState>()(
 
       setArSupported: (supported) => set({ isArSupported: supported }),
       triggerArGeneration: () =>
-        set((state) => {
-          if (state.arModelUrl) URL.revokeObjectURL(state.arModelUrl);
-          if (state.arUsdzUrl) URL.revokeObjectURL(state.arUsdzUrl);
-          return {
-            arGenerationRequest: Date.now(),
-            arStatus: 'preparing',
-            arModelUrl: null,
-            arUsdzUrl: null,
-            arFileName: null,
-            arError: null,
-          };
-        }),
+        set((state) => ({
+          ...revokeAndResetAr(state),
+          arGenerationRequest: Date.now(),
+          arStatus: 'preparing',
+        })),
       clearArGenerationRequest: () => set({ arGenerationRequest: null }),
-
-      setArModelUrl: (url) =>
-        set((state) => {
-          if (state.arModelUrl && state.arModelUrl !== url) {
-            URL.revokeObjectURL(state.arModelUrl);
-          }
-          return { arModelUrl: url };
-        }),
 
       setArAsset: (kind, url, fileName) =>
         set((state) => {
@@ -381,6 +413,8 @@ export const useStore = create<ViewerState & ArState>()(
               };
         }),
 
+      setArPresenting: () => set({ arStatus: 'presenting', arError: null }),
+
       setArError: (message) =>
         set({
           arStatus: 'error',
@@ -388,19 +422,7 @@ export const useStore = create<ViewerState & ArState>()(
           arGenerationRequest: null,
         }),
 
-      closeArSession: () =>
-        set((state) => {
-          if (state.arModelUrl) URL.revokeObjectURL(state.arModelUrl);
-          if (state.arUsdzUrl) URL.revokeObjectURL(state.arUsdzUrl);
-          return {
-            arStatus: 'idle',
-            arGenerationRequest: null,
-            arModelUrl: null,
-            arUsdzUrl: null,
-            arFileName: null,
-            arError: null,
-          };
-        }),
+      closeArSession: () => set((state) => revokeAndResetAr(state)),
     }),
     {
       name: '1to13d-storage',
@@ -413,14 +435,26 @@ export const useStore = create<ViewerState & ArState>()(
       merge: (persistedState: unknown, currentState) => {
         const persisted = (persistedState ?? {}) as Partial<ViewerState>;
         const screen = getDefaultScreenSize();
+
+        const rawPpi = persisted.ppi;
+        const validPpi =
+          typeof rawPpi === 'number' && Number.isFinite(rawPpi) && rawPpi > 0
+            ? Math.min(MAX_PPI, Math.max(MIN_PPI, rawPpi))
+            : currentState.ppi;
+
+        const rawDiagonal = persisted.calibrationSettings?.diagonalInches;
+        const validDiagonal =
+          typeof rawDiagonal === 'number' && Number.isFinite(rawDiagonal) && rawDiagonal > 0
+            ? Math.min(200, Math.max(1, rawDiagonal))
+            : currentState.calibrationSettings.diagonalInches;
+
         return {
           ...currentState,
-          ...persisted,
+          ppi: validPpi,
           calibrationSettings: {
-            ...currentState.calibrationSettings,
-            ...(persisted.calibrationSettings || {}),
             resolutionWidth: screen.width,
             resolutionHeight: screen.height,
+            diagonalInches: validDiagonal,
           },
         };
       },

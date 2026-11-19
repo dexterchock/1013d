@@ -15,8 +15,8 @@
 
 - **True 1:1 Real-World Scale**: Computes true millimeter-to-pixel zoom on any monitor or mobile display using diagonal size + logical resolution or manual ISO/IEC 7810 ID-1 (85.60 mm x 53.98 mm) credit-card calibration.
 - **Browser-Native Format Support**: Parses `.stl` (binary and ASCII), `.obj`, and `.3mf` meshes locally in WebGL/Three.js with complete file privacy.
-- **Inspection & Alignment**: Switch orthogonal `X` / `Y` / `Z` views, toggle a wireframe overlay on top of shaded models, translate or rotate parts with 15-degree snap, and inspect live millimeter dimensions.
-- **Zero-Install Mobile AR**: Exports models on demand to GLB/USDZ for iOS AR Quick Look, Android Scene Viewer, and WebXR.
+- **Inspection & Alignment**: Switch orthogonal `X` / `Y` / `Z` views, toggle a wireframe overlay on top of shaded models, translate or rotate parts with 45-degree snap, and inspect live millimeter dimensions.
+- **Zero-Install Mobile AR**: Exports models on demand to GLB/USDZ for iOS AR Quick Look and WebXR.
 
 ## Optional
 

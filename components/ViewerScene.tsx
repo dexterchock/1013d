@@ -1,13 +1,8 @@
-import React, { useRef, useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useRef, useEffect, useMemo, useCallback, useState, Suspense } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { CameraControls, Environment, Grid, Lightformer, Text } from '@react-three/drei';
+import { CameraControls, Environment, Grid, Lightformer } from '@react-three/drei';
 import CameraControlsImpl from 'camera-controls';
-import {
-  MathUtils,
-  PerspectiveCamera,
-  OrthographicCamera,
-  ACESFilmicToneMapping,
-} from 'three';
+import { OrthographicCamera, ACESFilmicToneMapping } from 'three';
 import { useStore } from '../store';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -15,52 +10,23 @@ const ModelWrapper = React.lazy(() =>
   import('./Model').then((module) => ({ default: module.ModelWrapper }))
 );
 
-const ErrorFallback: React.FC<{ fileName: string }> = ({ fileName }) => {
-  return (
-    <group>
-      <mesh>
-        <boxGeometry args={[20, 20, 20]} />
-        <meshStandardMaterial color="#ff3333" wireframe />
-      </mesh>
-      <Text
-        position={[0, 25, 0]}
-        fontSize={5}
-        color="#ff3333"
-        anchorX="center"
-        anchorY="middle"
-      >
-        Error: {fileName}
-      </Text>
-    </group>
-  );
-};
-
 const SceneContent: React.FC<{
   onMountControls: (controls: CameraControls) => void;
-}> = React.memo(({ onMountControls }) => {
+  onContextLost: () => void;
+  onContextRestored: () => void;
+}> = React.memo(({ onMountControls, onContextLost, onContextRestored }) => {
   const controlsRef = useRef<CameraControls | null>(null);
   const lastCheckTimeRef = useRef(0);
   const trailingCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { invalidate, camera, size, gl } = useThree();
+  const { invalidate, camera, gl } = useThree();
 
   const models = useStore((state) => state.models);
-  const isGridVisible = useStore((state) => state.isGridVisible);
   const ppi = useStore((state) => state.ppi);
   const isCalibrationModalOpen = useStore((state) => state.isCalibrationModalOpen);
+  const failModelLoad = useStore((state) => state.failModelLoad);
 
   const ppm = useMemo(() => ppi / 25.4, [ppi]);
-
-  const perspectiveFactor = useMemo(() => {
-    if (camera.type === 'PerspectiveCamera') {
-      const cam = camera as PerspectiveCamera;
-      if (cam.fov) {
-        const fovRad = MathUtils.degToRad(cam.fov);
-        return 1 / (2 * Math.tan(fovRad / 2) * ppm);
-      }
-    }
-    return 0;
-  }, [camera, ppm]);
 
   const evaluate1to1Scale = useCallback(() => {
     if (document.visibilityState !== 'visible') return;
@@ -78,12 +44,7 @@ const SceneContent: React.FC<{
     const tolerance = 0.015;
     let isMatch = false;
 
-    if (camera.type === 'PerspectiveCamera') {
-      const idealDist = size.height * perspectiveFactor;
-      if (idealDist > 0) {
-        isMatch = Math.abs(controls.distance - idealDist) / idealDist < tolerance;
-      }
-    } else if (camera.type === 'OrthographicCamera') {
+    if (camera.type === 'OrthographicCamera') {
       const cam = camera as OrthographicCamera;
       if (cam.zoom) {
         isMatch = Math.abs(cam.zoom - ppm) / ppm < tolerance;
@@ -93,7 +54,7 @@ const SceneContent: React.FC<{
     if (state.is1to1Mode !== isMatch) {
       state.set1to1Mode(isMatch);
     }
-  }, [ppm, perspectiveFactor, size.height, camera]);
+  }, [ppm, camera]);
 
   const schedule1to1Check = useCallback(
     (immediate = false) => {
@@ -135,23 +96,35 @@ const SceneContent: React.FC<{
     };
   }, []);
 
-  // Ensure demand frameloop wakes immediately on pointer/wheel/touch input.
+  // Ensure demand frameloop wakes on input and handle WebGL context loss/restoration.
   useEffect(() => {
     const handleInteraction = () => invalidate();
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      onContextLost();
+    };
+    const handleContextRestored = () => {
+      onContextRestored();
+      invalidate();
+    };
 
     const el = gl.domElement;
     el.addEventListener('pointerdown', handleInteraction);
     el.addEventListener('wheel', handleInteraction, { passive: true });
     el.addEventListener('touchstart', handleInteraction, { passive: true });
     el.addEventListener('touchmove', handleInteraction, { passive: true });
+    el.addEventListener('webglcontextlost', handleContextLost);
+    el.addEventListener('webglcontextrestored', handleContextRestored);
 
     return () => {
       el.removeEventListener('pointerdown', handleInteraction);
       el.removeEventListener('wheel', handleInteraction);
       el.removeEventListener('touchstart', handleInteraction);
       el.removeEventListener('touchmove', handleInteraction);
+      el.removeEventListener('webglcontextlost', handleContextLost);
+      el.removeEventListener('webglcontextrestored', handleContextRestored);
     };
-  }, [gl, invalidate]);
+  }, [gl, invalidate, onContextLost, onContextRestored]);
 
   // Trigger a final 1:1 check when camera damping settles.
   useEffect(() => {
@@ -252,30 +225,32 @@ const SceneContent: React.FC<{
       <ambientLight intensity={0.7} />
       <directionalLight position={[50, 50, 200]} intensity={1.1} color="#ffffff" />
 
-      {isGridVisible && (
-        <Grid
-          position={[0, 0, -0.05]}
-          rotation={[Math.PI / 2, 0, 0]}
-          args={[1000, 1000]}
-          cellSize={10}
-          sectionSize={100}
-          cellColor="#333333"
-          sectionColor="#5a5a5a"
-          cellThickness={0.8}
-          sectionThickness={1.2}
-          fadeDistance={450}
-          fadeStrength={1.5}
-          infiniteGrid
-          renderOrder={-10}
-        />
-      )}
+      <Grid
+        position={[0, 0, -0.05]}
+        rotation={[Math.PI / 2, 0, 0]}
+        args={[1000, 1000]}
+        cellSize={10}
+        sectionSize={100}
+        cellColor="#333333"
+        sectionColor="#5a5a5a"
+        cellThickness={0.8}
+        sectionThickness={1.2}
+        fadeDistance={650}
+        fadeStrength={1.5}
+        fadeFrom={0}
+        infiniteGrid
+        renderOrder={-10}
+      />
 
       {models.length > 0 &&
         models.map((model) => (
           <ErrorBoundary
             key={model.id}
-            fallback={<ErrorFallback fileName={model.file.name} />}
-            onError={(e) => console.warn(`Model failed to load: ${model.file.name}`, e)}
+            fallback={null}
+            onError={(e) => {
+              console.warn(`Model failed to load: ${model.file.name}`, e);
+              failModelLoad(model.id, `Failed to render "${model.file.name}".`);
+            }}
           >
             <Suspense fallback={null}>
               <ModelWrapper modelData={model} />
@@ -286,10 +261,22 @@ const SceneContent: React.FC<{
   );
 });
 
+const WebGlUnavailableFallback: React.FC = () => (
+  <div className="w-full h-full flex items-center justify-center p-6 bg-[#050505]">
+    <div className="liquid-lens rounded-2xl p-6 max-w-sm text-center">
+      <p className="text-sm font-semibold text-white mb-2">WebGL Context Unavailable</p>
+      <p className="text-xs text-white/75 leading-relaxed">
+        The 3D viewport could not initialize WebGL on this device or browser tab. Try reloading the page or enabling hardware acceleration.
+      </p>
+    </div>
+  </div>
+);
+
 export const ViewerScene: React.FC<{
   controlsRef: React.MutableRefObject<CameraControls | null>;
 }> = ({ controlsRef }) => {
   const selectModel = useStore((state) => state.selectModel);
+  const [contextLost, setContextLost] = useState(false);
 
   const handleMountControls = useCallback(
     (ctrl: CameraControls) => {
@@ -298,34 +285,59 @@ export const ViewerScene: React.FC<{
     [controlsRef]
   );
 
+  const handleContextLost = useCallback(() => setContextLost(true), []);
+  const handleContextRestored = useCallback(() => setContextLost(false), []);
+
   return (
-    <div className="w-full h-full relative bg-[#000000]">
-      <Canvas
-        dpr={[1, 2]}
-        orthographic
-        frameloop="demand"
-        style={{ touchAction: 'none' }}
-        camera={{
-          up: [0, 0, 1],
-          position: [200, -200, 200],
-          zoom: 5.0,
-          near: -500,
-          far: 1000,
-        }}
-        gl={{
-          preserveDrawingBuffer: true,
-          antialias: true,
-          toneMapping: ACESFilmicToneMapping,
-          toneMappingExposure: 1.0,
-          precision: 'highp',
-          powerPreference: 'high-performance',
-        }}
-        onPointerMissed={(e) => {
-          if (e.type === 'click') selectModel(null);
-        }}
-      >
-        <SceneContent onMountControls={handleMountControls} />
-      </Canvas>
+    <div
+      className="w-full h-full relative bg-[#000000]"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <ErrorBoundary fallback={<WebGlUnavailableFallback />}>
+        <Canvas
+          dpr={[1, 2]}
+          orthographic
+          frameloop="demand"
+          style={{ touchAction: 'none' }}
+          camera={{
+            up: [0, 0, 1],
+            position: [600, -600, 600],
+            zoom: 5.0,
+            near: 0.1,
+            far: 50000,
+          }}
+          gl={{
+            antialias: true,
+            toneMapping: ACESFilmicToneMapping,
+            toneMappingExposure: 1.0,
+            precision: 'highp',
+            powerPreference: 'high-performance',
+          }}
+          onPointerMissed={(e) => {
+            if (e.type === 'click') selectModel(null);
+          }}
+        >
+          <SceneContent
+            onMountControls={handleMountControls}
+            onContextLost={handleContextLost}
+            onContextRestored={handleContextRestored}
+          />
+        </Canvas>
+      </ErrorBoundary>
+
+      {contextLost && (
+        <div
+          role="alert"
+          className="fixed inset-0 z-40 flex items-center justify-center p-6 bg-black/75 backdrop-blur-sm pointer-events-none"
+        >
+          <div className="liquid-lens rounded-2xl px-5 py-4 text-center max-w-xs">
+            <p className="text-sm font-medium text-white">Graphics Context Paused</p>
+            <p className="text-xs text-white/75 mt-1">
+              Waiting for the browser to restore WebGL...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

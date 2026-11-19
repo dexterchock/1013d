@@ -1,14 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { useLoader, useThree, ThreeEvent } from '@react-three/fiber';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
+import { useThree, ThreeEvent } from '@react-three/fiber';
 import { TransformControls, Bvh } from '@react-three/drei';
 import type { TransformControls as TransformControlsImpl } from 'three-stdlib';
 import {
   MeshStandardMaterial,
   MeshBasicMaterial,
   DoubleSide,
+  BufferGeometry,
   Object3D,
   Group,
   Mesh,
@@ -200,84 +198,127 @@ const SceneProcessor: React.FC<{
   );
 };
 
-const disposeSceneGeometries = (root: Object3D) => {
+const disposeLoaderResources = (root: Object3D, includeMaterials: boolean) => {
+  const geometries = new Set<BufferGeometry>();
+  const materials = new Set<Material>();
+
   root.traverse((child) => {
-    if ((child as Mesh).isMesh && !child.userData.isWireframeOverlay) {
-      (child as Mesh).geometry?.dispose();
+    if (!(child as Mesh).isMesh || child.userData.isWireframeOverlay) return;
+    const mesh = child as Mesh;
+    if (mesh.geometry) {
+      geometries.add(mesh.geometry);
+    }
+    if (includeMaterials && mesh.material) {
+      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const mat of list) {
+        materials.add(mat);
+      }
     }
   });
+
+  for (const geometry of geometries) {
+    geometry.dispose();
+  }
+  for (const material of materials) {
+    disposeMaterial(material);
+  }
 };
 
-const ObjLoaded: React.FC<{ url: string; color: string; id: string }> = ({
-  url,
-  color,
-  id,
-}) => {
-  const obj = useLoader(OBJLoader, url);
-  const scene = useMemo(() => obj.clone(), [obj]);
-
-  useEffect(() => {
-    return () => {
-      disposeSceneGeometries(scene);
-      useLoader.clear(OBJLoader, url);
-    };
-  }, [scene, url]);
-
-  return <SceneProcessor scene={scene} modelId={id} color={color} />;
+const hasValidGeometry = (root: Object3D): boolean => {
+  let valid = false;
+  root.traverse((child) => {
+    if (valid || !(child as Mesh).isMesh || child.userData.isWireframeOverlay) return;
+    const positionAttr = (child as Mesh).geometry?.attributes?.position;
+    if (positionAttr && positionAttr.count > 0) {
+      valid = true;
+    }
+  });
+  return valid;
 };
 
-const StlLoaded: React.FC<{ url: string; color: string; id: string }> = ({
-  url,
-  color,
-  id,
-}) => {
-  const geom = useLoader(STLLoader, url);
-  const mesh = useMemo(() => new Mesh(geom), [geom]);
+const parseModelFile = async (file: File): Promise<Object3D> => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
 
-  useEffect(() => {
-    return () => {
-      geom.dispose();
-      useLoader.clear(STLLoader, url);
-    };
-  }, [geom, url]);
-
-  return <SceneProcessor scene={mesh} modelId={id} color={color} />;
-};
-
-const ThreeMFLoaded: React.FC<{ url: string; color: string; id: string }> = ({
-  url,
-  color,
-  id,
-}) => {
-  const object = useLoader(ThreeMFLoader, url);
-  const scene = useMemo(() => object.clone(), [object]);
-
-  useEffect(() => {
-    return () => {
-      disposeSceneGeometries(scene);
-      useLoader.clear(ThreeMFLoader, url);
-    };
-  }, [scene, url]);
-
-  return <SceneProcessor scene={scene} modelId={id} color={color} />;
+  switch (extension) {
+    case 'stl': {
+      const [buffer, { STLLoader }] = await Promise.all([
+        file.arrayBuffer(),
+        import('three/examples/jsm/loaders/STLLoader.js'),
+      ]);
+      return new Mesh(new STLLoader().parse(buffer));
+    }
+    case 'obj': {
+      const [text, { OBJLoader }] = await Promise.all([
+        file.text(),
+        import('three/examples/jsm/loaders/OBJLoader.js'),
+      ]);
+      return new OBJLoader().parse(text);
+    }
+    case '3mf': {
+      const [buffer, { ThreeMFLoader }] = await Promise.all([
+        file.arrayBuffer(),
+        import('three/examples/jsm/loaders/3MFLoader.js'),
+      ]);
+      return new ThreeMFLoader().parse(buffer);
+    }
+    default:
+      throw new Error(`Unsupported file extension: ${extension || 'unknown'}`);
+  }
 };
 
 const InnerModel: React.FC<{ modelData: LoadedModel }> = ({ modelData }) => {
-  const extension = useMemo(
-    () => modelData.file.name.split('.').pop()?.toLowerCase(),
-    [modelData.file.name]
-  );
+  const [loadedScene, setLoadedScene] = useState<Object3D | null>(null);
+  const failModelLoad = useStore((state) => state.failModelLoad);
+
+  useEffect(() => {
+    let cancelled = false;
+    let currentScene: Object3D | null = null;
+    setLoadedScene(null);
+
+    const loadModel = async () => {
+      try {
+        const parsed = await parseModelFile(modelData.file);
+        if (!hasValidGeometry(parsed)) {
+          disposeLoaderResources(parsed, true);
+          throw new Error('Model contains no valid mesh geometry.');
+        }
+
+        if (cancelled) {
+          disposeLoaderResources(parsed, true);
+          return;
+        }
+
+        currentScene = parsed;
+        setLoadedScene(parsed);
+      } catch (error) {
+        if (cancelled) return;
+        console.warn(`Model failed to load: ${modelData.file.name}`, error);
+        failModelLoad(
+          modelData.id,
+          `Failed to load "${modelData.file.name}". The file may be corrupted or unsupported.`
+        );
+      }
+    };
+
+    void loadModel();
+
+    return () => {
+      cancelled = true;
+      if (currentScene) {
+        disposeLoaderResources(currentScene, false);
+        currentScene = null;
+      }
+    };
+  }, [modelData.id, modelData.file, failModelLoad]);
 
   return (
     <group>
-      {extension === 'obj' && (
-        <ObjLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
-      )}
-      {extension === 'stl' && (
-        <StlLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
-      )}
-      {extension === '3mf' && (
-        <ThreeMFLoaded url={modelData.url} color={modelData.color} id={modelData.id} />
+      {loadedScene && (
+        <SceneProcessor
+          scene={loadedScene}
+          modelId={modelData.id}
+          color={modelData.color}
+        />
       )}
     </group>
   );
@@ -313,6 +354,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
   }, []);
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    if (e.delta > 5) return;
     e.stopPropagation();
     selectModel(modelData.id);
   };
@@ -406,7 +448,9 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
           });
           if (exportId !== arExportIdRef.current) return;
 
-          const blob = new Blob([arrayBuffer], { type: 'model/vnd.usdz+zip' });
+          const blob = new Blob([new Uint8Array(arrayBuffer)], {
+            type: 'model/vnd.usdz+zip',
+          });
           setArAsset('usdz', URL.createObjectURL(blob), baseName);
           return;
         }
@@ -462,7 +506,7 @@ export const ModelWrapper: React.FC<ModelWrapperProps> = ({ modelData }) => {
           object={group}
           mode={gizmoMode}
           enabled={true}
-          rotationSnap={rotationSnap ?? undefined}
+          rotationSnap={rotationSnap}
           size={0.8}
           space="local"
         />
