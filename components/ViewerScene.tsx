@@ -225,10 +225,13 @@ const SceneContent: React.FC<{
       <ambientLight intensity={0.7} />
       <directionalLight position={[50, 50, 200]} intensity={1.1} color="#ffffff" />
 
+      {/* Omit infiniteGrid: Drei multiplies vertices by (1 + fadeDistance) -> ±325,500, which causes
+          varying quantization / fwidth() breakup on Mali GPUs and at high zoom. A subdivided
+          1400×1400 (28×28) plane covers the 650 mm fadeDistance around origin cleanly. */}
       <Grid
         position={[0, 0, -0.05]}
         rotation={[Math.PI / 2, 0, 0]}
-        args={[1000, 1000]}
+        args={[1400, 1400, 28, 28]}
         cellSize={10}
         sectionSize={100}
         cellColor="#333333"
@@ -238,7 +241,6 @@ const SceneContent: React.FC<{
         fadeDistance={650}
         fadeStrength={1.5}
         fadeFrom={0}
-        infiniteGrid
         renderOrder={-10}
       />
 
