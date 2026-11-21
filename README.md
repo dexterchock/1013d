@@ -19,6 +19,7 @@ CAD tells you a part is 80 mm wide, and standard viewers let you orbit a mesh, y
 ## Features
 
 * **True 1:1 Physical Scale**: Locks an orthographic camera to your calibrated PPI so you can hold a ruler, caliper, PCB, or hardware right up to the display for fit checks.
+* **1:1 Physical Screen Ruler**: Toggle the **`cm`** button in the Models tab to slide out a standalone 1:1 centimeter ruler along the right edge of the display, driven directly by your calibrated PPI.
 * **Screen and Card Calibration**: Calculates PPI from logical screen resolution and monitor diagonal inches, or lets you match an interactive gauge against a physical ISO/IEC 7810 ID 1 credit card (`85.60 mm x 53.98 mm`).
 * **STL, OBJ, and 3MF Support**: Load multiple binary or ASCII `.stl`, `.obj`, and `.3mf` files locally, or click **Try Example** to inspect the bundled 20 mm calibration cube.
 * **Wireframe and Transform Tools**: Switch between shaded view and shaded with wireframe overlay, snap camera views to `X`, `Y`, or `Z` axes, move or rotate models with optional 45 degree snap, and edit live millimeter dimensions.
@@ -30,6 +31,7 @@ CAD tells you a part is 80 mm wide, and standard viewers let you orbit a mesh, y
 1. Open the viewer and drop an `.stl`, `.obj`, or `.3mf` file onto the canvas.
 2. Open the **Calibration** tab to enter your monitor diagonal size or calibrate with a physical card.
 3. Click **`1:1`** on the bottom toolbar to lock physical scale (`20 mm` renders as `20 mm` on the calibrated screen).
+4. Click **`cm`** next to the upload box in the **Models** tab to open the standalone 1:1 physical centimeter ruler along the right screen edge.
 
 ## Local Development
 

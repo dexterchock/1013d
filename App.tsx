@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { Overlay } from './components/ControlPanel';
 import { AuraEffect } from './components/AuraEffect';
+import { ScreenRuler } from './components/ScreenRuler';
 import { CalibrationModal } from './components/CalibrationModal';
 import { ArLaunchModal } from './components/ArLaunchModal';
 import type { CameraControls } from '@react-three/drei';
@@ -216,6 +217,9 @@ function App() {
 
       {/* UI Overlay */}
       <Overlay controlsRef={controlsRef} />
+
+      {/* Standalone 1:1 Physical Centimeter Ruler */}
+      <ScreenRuler />
 
       {/* Full Screen Calibration Modal */}
       <CalibrationModal />

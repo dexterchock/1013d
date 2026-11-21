@@ -131,3 +131,22 @@ export const WireframeIcon: React.FC = () => (
     <path d="M12 21.25V12" />
   </svg>
 );
+
+export const RulerIcon: React.FC = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="6" y="2.5" width="12" height="19" rx="2" />
+    <path d="M6 6.5h4.5" />
+    <path d="M6 10.25h3" />
+    <path d="M6 14h4.5" />
+    <path d="M6 17.75h3" />
+  </svg>
+);

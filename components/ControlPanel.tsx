@@ -3,7 +3,7 @@ import type { CameraControls } from '@react-three/drei';
 import { useStore } from '../store';
 import { LiquidContainer, LiquidButton } from './LiquidContainer';
 import { AnimatedLogo } from './AnimatedLogo';
-import { ChevronDown, ChevronUp, CloseIcon, InfoIcon } from './Icons';
+import { ChevronDown, ChevronUp, CloseIcon, InfoIcon, RulerIcon } from './Icons';
 import { NumericInput } from './NumericInput';
 import { ModelListItem } from './ModelListItem';
 import { BottomPill } from './BottomPill';
@@ -16,12 +16,14 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   const models = useStore((state) => state.models);
   const sidebarOpen = useStore((state) => state.sidebarOpen);
   const ppi = useStore((state) => state.ppi);
+  const isRulerVisible = useStore((state) => state.isRulerVisible);
   const calibrationSettings = useStore((state) => state.calibrationSettings);
   const uploadError = useStore((state) => state.uploadError);
 
   const addModels = useStore((state) => state.addModels);
   const addExampleModel = useStore((state) => state.addExampleModel);
   const toggleSidebar = useStore((state) => state.toggleSidebar);
+  const toggleRuler = useStore((state) => state.toggleRuler);
   const setCalibrationSettings = useStore((state) => state.setCalibrationSettings);
   const setPPI = useStore((state) => state.setPPI);
   const setCalibrationModalOpen = useStore((state) => state.setCalibrationModalOpen);
@@ -104,7 +106,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between overflow-hidden">
       {/* LEFT SIDEBAR: Collapsible */}
       <div
         ref={containerRef}
@@ -191,7 +193,7 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                 <div className="p-3 bg-white/[0.04] rounded-xl border border-white/10 text-xs leading-relaxed text-white/85">
                   <p className="mb-2">
                     A 3D viewer to inspect and scale models in true 1:1 dimensions using
-                    display PPI or card calibration.
+                    display PPI, card calibration, and a 1:1 cm screen ruler.
                   </p>
                   <div className="flex items-center gap-2 text-white/70 font-mono text-[10px] uppercase tracking-wider">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
@@ -237,8 +239,8 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
               {/* TAB CONTENT: MODELS */}
               {activeTab === 'models' && (
                 <div className="flex flex-col transition-opacity duration-300">
-                  <div className="mb-4 shrink-0">
-                    <label className="hover-pop-btn flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/[0.06] hover:border-white/35 cursor-pointer group">
+                  <div className="flex items-stretch gap-2 mb-4 shrink-0">
+                    <label className="hover-pop-btn flex flex-col items-center justify-center flex-1 min-w-0 h-24 border-2 border-dashed border-white/20 rounded-xl hover:bg-white/[0.06] hover:border-white/35 cursor-pointer group">
                       <span className="hover-pop-soft-label flex flex-col items-center">
                         <span className="text-sm text-white/90 group-hover:text-white">
                           Drag &amp; Drop or Click
@@ -255,6 +257,23 @@ export const Overlay: React.FC<OverlayProps> = ({ controlsRef }) => {
                         accept=".obj,.stl,.3mf,*/*"
                       />
                     </label>
+                    <button
+                      type="button"
+                      onClick={toggleRuler}
+                      className={`w-14 shrink-0 h-24 rounded-xl flex flex-col items-center justify-center gap-1.5 border hover-pop-btn ${
+                        isRulerVisible
+                          ? 'liquid-chip-active border-white/25'
+                          : 'bg-white/[0.04] border-white/15 text-white/80 hover:bg-white/[0.08] hover:border-white/30 hover:text-white'
+                      }`}
+                      title="1:1 Screen Ruler"
+                      aria-label="Toggle 1:1 Screen Ruler"
+                      aria-pressed={isRulerVisible}
+                    >
+                      <span className="hover-pop-icon">
+                        <RulerIcon />
+                      </span>
+                      <span className="text-[10px] font-mono leading-none">cm</span>
+                    </button>
                   </div>
 
                   {uploadError && (

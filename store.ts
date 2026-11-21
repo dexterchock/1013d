@@ -188,6 +188,7 @@ export const useStore = create<ViewerState & ArState>()(
       rotationSnap: Math.PI / 4,
       sidebarOpen: true,
       is1to1Mode: false,
+      isRulerVisible: false,
       isCalibrationModalOpen: false,
       uploadError: null,
 
@@ -316,6 +317,8 @@ export const useStore = create<ViewerState & ArState>()(
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
       set1to1Mode: (is1to1) => set({ is1to1Mode: is1to1 }),
+
+      toggleRuler: () => set((state) => ({ isRulerVisible: !state.isRulerVisible })),
 
       setCalibrationModalOpen: (isOpen) => set({ isCalibrationModalOpen: isOpen }),
 

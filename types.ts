@@ -22,6 +22,7 @@ export interface ViewerState {
   rotationSnap: number | null; // in radians
   sidebarOpen: boolean;
   is1to1Mode: boolean;
+  isRulerVisible: boolean;
   isCalibrationModalOpen: boolean;
   uploadError: string | null;
 
@@ -50,6 +51,7 @@ export interface ViewerState {
   setRotationSnap: (angleDeg: number | null) => void;
   toggleSidebar: () => void;
   set1to1Mode: (is1to1: boolean) => void;
+  toggleRuler: () => void;
   setCalibrationModalOpen: (isOpen: boolean) => void;
   clearUploadError: () => void;
   updateModelDimensions: (id: string, x: number, y: number, z: number) => void;
