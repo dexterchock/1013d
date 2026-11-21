@@ -117,7 +117,7 @@ export const ScreenRuler: React.FC = () => {
         touchAction: 'none',
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
-      className={`fixed inset-y-0 right-0 z-20 w-12 bg-black border-l border-white/15 flex flex-col select-none transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+      className={`absolute inset-y-0 right-0 z-20 w-12 bg-black border-l border-white/15 flex flex-col select-none transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         isRulerVisible
           ? 'translate-x-0 pointer-events-auto'
           : 'translate-x-full pointer-events-none'

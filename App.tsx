@@ -195,6 +195,12 @@ function App() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Real 1px fixed top element so iOS 27 status bar sampler reads #050505 with default status-bar-style */}
+      <div
+        aria-hidden="true"
+        className="fixed top-0 left-0 right-0 h-px bg-[#050505] pointer-events-none z-50"
+      />
+
       <div className="absolute inset-0 bg-gradient-to-b from-[#080808] to-[#000000] pointer-events-none" />
 
       {/* Drag Overlay Feedback */}
