@@ -66,7 +66,7 @@ export const CalibrationModal: React.FC = () => {
       aria-label="Manual Screen Calibration"
       aria-hidden={!isOpen}
       className={`
-        fixed inset-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+        absolute inset-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
         ${
           isOpen
             ? 'opacity-100 visible pointer-events-auto backdrop-blur-md'
@@ -100,6 +100,10 @@ export const CalibrationModal: React.FC = () => {
                 : 'scale-95 opacity-0 translate-y-4 blur-sm'
             }
           `}
+          style={{
+            paddingTop: 'max(3rem, calc(var(--ui-top-offset, 16px) + 1rem))',
+            paddingBottom: 'max(3rem, calc(var(--ui-bottom-offset, 24px) + 1rem))',
+          }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setCalibrationModalOpen(false);
           }}
