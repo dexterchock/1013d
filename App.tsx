@@ -225,12 +225,12 @@ function App() {
       {/* Safari 26+ 11px status bar tinting strip + safe zone enforcer overlay (inline backgroundColor required by WebKit observer) */}
       <div
         aria-hidden="true"
-        className="fixed top-0 left-0 w-full z-[200] pointer-events-none"
+        className="fixed top-0 left-0 w-full z-10 pointer-events-none"
         style={{ height: '11px', backgroundColor: '#050505' }}
       />
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-[80] pointer-events-none"
+        className="fixed inset-0 z-[15] pointer-events-none"
       >
         <div className="absolute inset-0 bg-transparent" />
       </div>
