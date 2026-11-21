@@ -10,7 +10,7 @@ export const AuraEffect: React.FC = () => {
 
   return (
     <div
-      className={`absolute inset-0 pointer-events-none z-20 transition-opacity duration-1000 ease-out
+      className={`fixed inset-0 pointer-events-none z-20 transition-opacity duration-1000 ease-out
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
     >

@@ -115,12 +115,12 @@ export const ScreenRuler: React.FC = () => {
       aria-hidden={!isRulerVisible}
       style={{
         touchAction: 'none',
-        paddingTop: 'var(--ruler-top-inset, 0px)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
-      className={`absolute inset-y-0 right-0 z-20 w-12 bg-[#000000] border-l border-white/15 flex flex-col select-none transition-[transform,opacity,visibility] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+      className={`fixed inset-y-0 right-0 z-20 w-12 bg-black border-l border-white/15 flex flex-col select-none transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         isRulerVisible
-          ? 'translate-x-0 opacity-100 visible pointer-events-auto'
-          : 'translate-x-full opacity-0 invisible pointer-events-none'
+          ? 'translate-x-0 pointer-events-auto'
+          : 'translate-x-full pointer-events-none'
       }`}
     >
       <div className="shrink-0 h-12 px-0.5 flex flex-col items-center justify-center border-b border-white/15 font-mono leading-tight text-center">

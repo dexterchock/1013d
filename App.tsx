@@ -40,44 +40,6 @@ const ViewerScene = React.lazy(() =>
   }))
 );
 
-function isIosStandaloneMode(): boolean {
-  if (typeof window === 'undefined') return false;
-  return (window.navigator as { standalone?: boolean }).standalone === true;
-}
-
-/** Sync `--app-height` and `html.ios-standalone` to bypass WebKit's standalone `viewport-fit=cover` bottom truncation bug. */
-function syncIosStandaloneViewport(): number | null {
-  if (typeof document === 'undefined') return null;
-  const docEl = document.documentElement;
-  if (!isIosStandaloneMode()) {
-    docEl.classList.remove('ios-standalone');
-    docEl.style.removeProperty('--app-height');
-    return null;
-  }
-
-  docEl.classList.add('ios-standalone');
-  const sw = window.screen?.width ?? 0;
-  const sh = window.screen?.height ?? 0;
-  const iw = window.innerWidth;
-  const minDim = Math.min(sw, sh);
-  const maxDim = Math.max(sw, sh);
-
-  let expectedH: number | null = null;
-  if (minDim > 0 && Math.abs(iw - minDim) <= 4) {
-    expectedH = maxDim;
-  } else if (maxDim > 0 && Math.abs(iw - maxDim) <= 4) {
-    expectedH = minDim;
-  }
-
-  if (!expectedH || !Number.isFinite(expectedH)) {
-    docEl.style.removeProperty('--app-height');
-    return null;
-  }
-
-  docEl.style.setProperty('--app-height', `${expectedH}px`);
-  return expectedH;
-}
-
 function App() {
   const controlsRef = useRef<CameraControls | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -93,31 +55,6 @@ function App() {
   const [isWebArReady, setIsWebArReady] = useState(false);
   const modelViewerRef = useRef<ModelViewerElement | null>(null);
   const isIos = isIosDevice();
-
-  useEffect(() => {
-    syncIosStandaloneViewport();
-    let orientTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const handleViewportSync = () => {
-      syncIosStandaloneViewport();
-    };
-    const handleOrientation = () => {
-      syncIosStandaloneViewport();
-      if (orientTimer) clearTimeout(orientTimer);
-      orientTimer = setTimeout(syncIosStandaloneViewport, 150);
-    };
-
-    window.addEventListener('resize', handleViewportSync);
-    window.addEventListener('orientationchange', handleOrientation);
-    window.addEventListener('pageshow', handleViewportSync);
-
-    return () => {
-      if (orientTimer) clearTimeout(orientTimer);
-      window.removeEventListener('resize', handleViewportSync);
-      window.removeEventListener('orientationchange', handleOrientation);
-      window.removeEventListener('pageshow', handleViewportSync);
-    };
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -252,17 +189,13 @@ function App() {
 
   return (
     <main
-      className="w-screen relative bg-[#000000] selection:bg-blue-500/30 font-sans overflow-hidden"
-      style={{
-        height: 'var(--app-height, 100dvh)',
-        minHeight: 'var(--app-height, 100dvh)',
-      }}
+      className="w-screen h-[100dvh] relative bg-[#050505] selection:bg-blue-500/30 font-sans overflow-hidden"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="absolute inset-0 bg-[#000000] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#080808] to-[#000000] pointer-events-none" />
 
       {/* Drag Overlay Feedback */}
       <div

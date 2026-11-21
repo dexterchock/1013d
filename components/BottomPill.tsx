@@ -37,10 +37,7 @@ export const BottomPill: React.FC<BottomPillProps> = ({ controlsRef }) => {
   };
 
   return (
-    <div
-      className="absolute left-1/2 -translate-x-1/2 max-w-[calc(100vw-1rem)] pointer-events-auto"
-      style={{ bottom: 'var(--ui-bottom-offset, 24px)' }}
-    >
+    <div className="absolute bottom-8 md:bottom-6 left-1/2 -translate-x-1/2 max-w-[calc(100vw-1rem)] pointer-events-auto">
       <LiquidContainer className="flex items-center gap-0 p-1 rounded-full overflow-hidden">
         {/* Axis Views Group */}
         <div className="flex items-center gap-0.5">

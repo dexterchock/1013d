@@ -3,71 +3,13 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --ui-top-offset: calc(env(safe-area-inset-top, 0px) + 16px);
-    --ruler-top-inset: env(safe-area-inset-top, 0px);
-    --ui-bottom-offset: max(24px, calc(env(safe-area-inset-bottom, 0px) + 8px));
-  }
-
   body {
-    @apply bg-[#000000] text-white overflow-hidden;
+    @apply bg-[#050505] text-white overflow-hidden;
     /* Critical for 1:1 scale precision */
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  /* iOS 26 / iOS 27 standalone PWA fixes (viewport-fit=cover + black-translucent):
-     1. Recover WebKit's standalone viewport-fit=cover bottom truncation via JS-measured --app-height.
-     2. Push mobile top controls below iOS 26/27 Liquid Glass top progressive blur (~85-90px).
-     3. Blend top status-bar zone into pure #000000 so the system top glass blur has no milky tint. */
-  html.ios-standalone,
-  html.ios-standalone body {
-    height: var(--app-height, 100vh);
-    min-height: var(--app-height, 100vh);
-    background-color: #000000;
-  }
-
-  html.ios-standalone #root {
-    width: 100%;
-    height: var(--app-height, 100vh);
-    min-height: var(--app-height, 100vh);
-    overflow: hidden;
-    position: relative;
-  }
-
-  @media (max-width: 639px) {
-    :root {
-      --ui-bottom-offset: max(24px, calc(env(safe-area-inset-bottom, 0px) - 6px));
-    }
-
-    html.ios-standalone {
-      --ui-top-offset: calc(env(safe-area-inset-top, 0px) + 34px);
-      --ruler-top-inset: calc(env(safe-area-inset-top, 0px) + 34px);
-      --ui-bottom-offset: max(18px, calc(env(safe-area-inset-bottom, 0px) - 10px));
-    }
-  }
-
-  @media (orientation: portrait) {
-    html.ios-standalone main::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: calc(env(safe-area-inset-top, 0px) + 56px);
-      z-index: 25;
-      background: linear-gradient(
-        to bottom,
-        #000000 0%,
-        #000000 50%,
-        rgba(0, 0, 0, 0.72) 72%,
-        rgba(0, 0, 0, 0.28) 88%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
   }
 
   button,
