@@ -56,6 +56,33 @@ function App() {
   const modelViewerRef = useRef<ModelViewerElement | null>(null);
   const isIos = isIosDevice();
 
+  // Force Safari 26+ status bar observer to sample the #050505 tinting strip on mount (+ "fe" meta dance)
+  useEffect(() => {
+    const targetColor = '#050505';
+    document.body.style.backgroundColor = targetColor;
+
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', targetColor);
+
+    let r2 = 0;
+    const r1 = requestAnimationFrame(() => {
+      meta?.setAttribute('content', `${targetColor}fe`);
+      r2 = requestAnimationFrame(() => {
+        meta?.setAttribute('content', targetColor);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(r1);
+      if (r2) cancelAnimationFrame(r2);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -195,11 +222,18 @@ function App() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Real 1px fixed top element so iOS 27 status bar sampler reads #050505 with default status-bar-style */}
+      {/* Safari 26+ 11px status bar tinting strip + safe zone enforcer overlay (inline backgroundColor required by WebKit observer) */}
       <div
         aria-hidden="true"
-        className="fixed top-0 left-0 right-0 h-px bg-[#050505] pointer-events-none z-50"
+        className="fixed top-0 left-0 w-full z-[200] pointer-events-none"
+        style={{ height: '11px', backgroundColor: '#050505' }}
       />
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-[80] pointer-events-none"
+      >
+        <div className="absolute inset-0 bg-transparent" />
+      </div>
 
       <div className="absolute inset-0 bg-gradient-to-b from-[#080808] to-[#000000] pointer-events-none" />
 
